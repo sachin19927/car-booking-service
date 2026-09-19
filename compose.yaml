@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: 'postgres:18-alpine'
+    environment:
+      POSTGRES_DB: velocity-motors-carrental
+      POSTGRES_PASSWORD: sachin_hs_123
+      POSTGRES_USER: booking-service
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking-service -d velocity-motors-carrental"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  zipkin:
+    image: 'openzipkin/zipkin:latest'
+    ports:
+      - '9411'
+volumes:
+  postgres_data:
