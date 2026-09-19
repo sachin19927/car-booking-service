@@ -8,8 +8,10 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @Entity
 @Table(name = "car_booking")
@@ -55,4 +57,9 @@ public class CarBooking {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    public void confirm() {
+        this.bookingStatus = BookingStatus.CONFIRMED;
+        this.updatedAt = Instant.now();
+    }
 }

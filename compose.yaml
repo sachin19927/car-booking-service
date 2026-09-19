@@ -20,3 +20,4 @@ services:
       - '9411'
 volumes:
   postgres_data:
+  wiremock_data:

@@ -4,6 +4,8 @@ import com.motors.velocity.carbookingservice.exception.BusinessValidationExcepti
 import com.motors.velocity.carbookingservice.model.ErrorCode;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,9 +15,11 @@ public class BookingValidator {
 
     public void validateRentalPeriod(Instant rentalStart, Instant rentalEnd) {
 
-        if (!rentalEnd.isAfter(rentalStart)) {
+        if (!rentalStart.isBefore(rentalEnd)) {
             throw new BusinessValidationException(
-                    ErrorCode.END_DATE_SHORTER_THAN_START_DATE, "Rental end date must be after rental start date");
+                    ErrorCode.INVALID_RENTAL_PERIOD,
+                    "Rental start date and time must be before rental end date and time"
+            );
         }
 
         Duration duration = Duration.between(rentalStart, rentalEnd);

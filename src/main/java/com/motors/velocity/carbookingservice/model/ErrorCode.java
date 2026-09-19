@@ -1,13 +1,11 @@
 package com.motors.velocity.carbookingservice.model;
 
 public enum ErrorCode {
-    STATUS_REQUIRED,
-    STARTED_AT_REQUIRED,
-
-    END_DATE_SHORTER_THAN_START_DATE,
     MAX_RENTAL_DAYS_EXCEEDED,
 
-    VEHICLE_ID_REQUIRED,
+
+    INVALID_RENTAL_PERIOD,
+
     VEHICLE_NOT_FOUND,
     VEHICLE_UNAVAILABLE,
 
@@ -15,4 +13,6 @@ public enum ErrorCode {
     DATA_INTEGRITY_VIOLATION,
     MALFORMED_REQUEST,
     VALIDATION_FAILED,
+
+    PAYMENT_NOT_APPROVED,
 }

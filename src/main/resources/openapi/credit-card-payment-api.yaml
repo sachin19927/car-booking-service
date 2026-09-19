@@ -1,0 +1,87 @@
+openapi: 3.0.3
+
+info:
+  title: Credit Card Payment API
+  description: API to retrieve the status of a credit card payment
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:9090/credit-card-payment-api
+
+paths:
+  /payment-status:
+    post:
+      summary: Retrieve payment status
+      description: Accepts payment reference and provides the status of the payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentStatusRetrievalRequest'
+
+      responses:
+        '200':
+          description: Successful response with payment status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentStatusResponse'
+
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '404':
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+
+    PaymentStatusRetrievalRequest:
+      type: object
+      properties:
+        paymentReference:
+          type: string
+          description: Reference of the payment
+          example: DL123456789
+      required:
+        - paymentReference
+
+    PaymentStatusResponse:
+      type: object
+      properties:
+        lastUpdateDate:
+          type: string
+          format: date-time
+          description: Last updated timestamp
+          example: 2017-07-21T17:32:28Z
+
+        status:
+          type: string
+          description: Payment status
+          enum:
+            - APPROVED
+            - REJECTED
+          example: APPROVED
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message

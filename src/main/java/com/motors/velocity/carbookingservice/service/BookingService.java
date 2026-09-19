@@ -1,5 +1,8 @@
 package com.motors.velocity.carbookingservice.service;
 
+import com.motors.velocity.carbookingservice.client.payment.api.DefaultApi;
+import com.motors.velocity.carbookingservice.client.payment.model.PaymentStatusResponse;
+import com.motors.velocity.carbookingservice.client.payment.model.PaymentStatusRetrievalRequest;
 import com.motors.velocity.carbookingservice.dto.BookingRequest;
 import com.motors.velocity.carbookingservice.dto.BookingResponse;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
@@ -7,12 +10,14 @@ import com.motors.velocity.carbookingservice.exception.BusinessValidationExcepti
 import com.motors.velocity.carbookingservice.mapper.BookingMapper;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.ErrorCode;
+import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
-import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -23,21 +28,21 @@ public class BookingService {
     private final BookingValidator bookingValidator;
     private final BookingMapper bookingMapper;
     private final BookingRepository bookingRepository;
+    private final DefaultApi creditCardPaymentApi;
+    private final PaymentService paymentService;
 
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
 
         validateBusinessRules(request);
         CarBooking carBooking = bookingMapper.toBooking(request);
+        processPayment(carBooking);
         bookingRepository.save(carBooking);
         return bookingMapper.toBookingResponse(carBooking);
     }
 
     private void validateBusinessRules(BookingRequest request) {
 
-        if (request.startDate().isAfter(request.endDate())) {
-            throw new BusinessValidationException(ErrorCode.STARTED_AT_REQUIRED, "Start date must be before end date");
-        }
 
         // 1. Validate vehicle
         vehicleService.validateVehicle(request.vehicleId());
@@ -59,5 +64,28 @@ public class BookingService {
                     ErrorCode.VEHICLE_UNAVAILABLE,
                     "Vehicle " + request.vehicleId() + " is not available for the requested period");
         }
+    }
+
+    private void processPayment(CarBooking booking) {
+
+        switch (booking.getPaymentMode()) {
+
+            case CASH -> booking.confirm();
+
+            case CREDIT_CARD -> processCreditCardPayment(booking);
+
+            case BANK_TRANSFER -> {
+                // Remain PENDING_PAYMENT
+            }
+        }
+    }
+
+    private void processCreditCardPayment(CarBooking booking) {
+
+        paymentService.checkPayment(
+                booking.getPaymentReference()
+        );
+
+        booking.confirm();
     }
 }
