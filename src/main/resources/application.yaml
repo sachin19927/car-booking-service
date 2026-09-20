@@ -34,6 +34,21 @@ resilience4j:
       creditCardPayment:
         max-attempts: 3
         wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        enable-randomized-wait: true
         retry-exceptions:
           - com.motors.velocity.carbookingservice.exception.TransientPaymentServiceException
           - org.springframework.web.client.ResourceAccessException
+
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    export:
+      zipkin:
+        endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}

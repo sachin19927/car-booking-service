@@ -42,13 +42,39 @@ public class BookingService {
 
         // 2. Convert API ZonedDateTime → Instant
         Instant rentalStart = request.startDate().toInstant();
-
         Instant rentalEnd = request.endDate().toInstant();
-
         // 3. Validate rental period
         bookingValidator.validateRentalPeriod(rentalStart, rentalEnd);
-
+        
+        validatePaymentDetails(request);
+        
         // 4. Check vehicle availability
+        validateAvailability(request, rentalStart, rentalEnd);
+    }
+
+
+    private void processPayment(CarBooking booking) {
+
+        switch (booking.getPaymentMode()) {
+            case CASH, DIGITAL_WALLET -> booking.confirm();
+            case CREDIT_CARD -> processCreditCardPayment(booking);
+            case BANK_TRANSFER -> processBankTransferPayment(booking);
+        }
+    }
+
+    private void validatePaymentDetails(BookingRequest request) {
+
+        if (request.paymentMethod().requiresPaymentReference()
+                && (request.paymentReference() == null
+                        || request.paymentReference().isBlank())) {
+
+            throw new BusinessValidationException(
+                    ErrorCode.PAYMENT_REFERENCE_REQUIRED,
+                    "Payment reference is required for " + request.paymentMethod());
+        }
+    }
+
+    private void validateAvailability(BookingRequest request, Instant rentalStart, Instant rentalEnd) {
         boolean alreadyBooked = bookingRepository.existsOverlappingBooking(
                 request.vehicleId(), rentalStart, rentalEnd, BookingStatus.CANCELLED);
 
@@ -59,23 +85,12 @@ public class BookingService {
         }
     }
 
-    private void processPayment(CarBooking booking) {
-
-        switch (booking.getPaymentMode()) {
-            case CASH, DIGITAL_WALLET -> booking.confirm();
-
-            case CREDIT_CARD -> processCreditCardPayment(booking);
-
-            case BANK_TRANSFER -> {
-                // Remain PENDING_PAYMENT
-            }
-        }
+    private void processCreditCardPayment(CarBooking booking) {
+        paymentService.checkPayment(booking.getPaymentReference());
+        booking.confirm();
     }
 
-    private void processCreditCardPayment(CarBooking booking) {
-
-        paymentService.checkPayment(booking.getPaymentReference());
-
-        booking.confirm();
+    private void processBankTransferPayment(CarBooking booking) {
+        booking.paymentPending();
     }
 }

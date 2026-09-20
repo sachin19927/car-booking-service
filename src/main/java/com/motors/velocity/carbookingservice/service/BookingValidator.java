@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class BookingValidator {
 
-    private static final long MAX_RENTAL_DAYS = 21;
+    private static final Duration MAX_RENTAL_DURATION = Duration.ofDays(21);
 
     public void validateRentalPeriod(Instant rentalStart, Instant rentalEnd) {
 
@@ -21,7 +21,7 @@ public class BookingValidator {
 
         Duration duration = Duration.between(rentalStart, rentalEnd);
 
-        if (duration.toDays() > MAX_RENTAL_DAYS) {
+        if (duration.compareTo(MAX_RENTAL_DURATION) > 0) {
             throw new BusinessValidationException(
                     ErrorCode.MAX_RENTAL_DAYS_EXCEEDED, "A vehicle cannot be booked for more than 21 days");
         }

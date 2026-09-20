@@ -73,4 +73,8 @@ public class CarBooking {
     public void confirm() {
         this.bookingStatus = BookingStatus.CONFIRMED;
     }
+
+    public void paymentPending() {
+        this.bookingStatus = BookingStatus.PENDING_PAYMENT;
+    }
 }

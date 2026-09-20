@@ -1,24 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
-    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="hsm-application"/>
+    <springProperty
+            scope="context"
+            name="appName"
+            source="spring.application.name"
+            defaultValue="car-booking-service"/>
 
-    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="JSON_CONSOLE"
+              class="ch.qos.logback.core.ConsoleAppender">
+
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+
             <providers>
+
                 <timestamp>
                     <timeZone>UTC</timeZone>
                 </timestamp>
+
                 <pattern>
                     <pattern>
                         {
                         "app": "${appName}",
                         "traceId": "%X{traceId}",
                         "spanId": "%X{spanId}",
+                        "requestId": "%X{requestId}",
                         "level": "%level",
-                        "logger": "%logger{20}",
+                        "logger": "%logger{36}",
                         "thread": "%thread",
                         "message": "%message",
                         "context": "%contextName",
@@ -26,18 +36,23 @@
                         }
                     </pattern>
                 </pattern>
+
             </providers>
+
         </encoder>
+
     </appender>
 
     <root level="INFO">
         <appender-ref ref="JSON_CONSOLE"/>
     </root>
 
-    <!-- Example for specific package logging -->
-    <logger name="org.motors.velocity.carbookingservice" level="DEBUG" additivity="false">
+    <logger name="com.motors.velocity.carbookingservice"
+            level="INFO"
+            additivity="false">
+
         <appender-ref ref="JSON_CONSOLE"/>
+
     </logger>
 
-    <include resource="org/springframework/cloud/sleuth/autoconfig/instrument/logging/logback-spring.xml"/>
 </configuration>
