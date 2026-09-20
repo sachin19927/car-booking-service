@@ -1,8 +1,6 @@
 package com.motors.velocity.carbookingservice.service;
 
 import com.motors.velocity.carbookingservice.client.payment.api.DefaultApi;
-import com.motors.velocity.carbookingservice.client.payment.model.PaymentStatusResponse;
-import com.motors.velocity.carbookingservice.client.payment.model.PaymentStatusRetrievalRequest;
 import com.motors.velocity.carbookingservice.dto.BookingRequest;
 import com.motors.velocity.carbookingservice.dto.BookingResponse;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
@@ -10,14 +8,12 @@ import com.motors.velocity.carbookingservice.exception.BusinessValidationExcepti
 import com.motors.velocity.carbookingservice.mapper.BookingMapper;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.ErrorCode;
-import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Instant;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -42,7 +38,6 @@ public class BookingService {
     }
 
     private void validateBusinessRules(BookingRequest request) {
-
 
         // 1. Validate vehicle
         vehicleService.validateVehicle(request.vehicleId());
@@ -69,7 +64,6 @@ public class BookingService {
     private void processPayment(CarBooking booking) {
 
         switch (booking.getPaymentMode()) {
-
             case CASH -> booking.confirm();
 
             case CREDIT_CARD -> processCreditCardPayment(booking);
@@ -82,9 +76,7 @@ public class BookingService {
 
     private void processCreditCardPayment(CarBooking booking) {
 
-        paymentService.checkPayment(
-                booking.getPaymentReference()
-        );
+        paymentService.checkPayment(booking.getPaymentReference());
 
         booking.confirm();
     }

@@ -29,6 +29,7 @@
     <properties>
         <java.version>25</java.version>
         <mapstruct.version>1.6.3</mapstruct.version>
+        <logstash.version>7.4</logstash.version>
         <spotless.version>3.10.2</spotless.version>
         <java.format.version>2.96.0</java.format.version>
     </properties>
@@ -101,6 +102,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>${logstash.version}</version>
+        </dependency>
+
         <!-- Jackson Java Time support -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -113,6 +120,8 @@
             <artifactId>jackson-databind-nullable</artifactId>
             <version>0.2.6</version>
         </dependency>
+
+
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -221,16 +230,18 @@
             <plugin>
                 <groupId>org.openapitools</groupId>
                 <artifactId>openapi-generator-maven-plugin</artifactId>
-                <version>7.10.0</version>
+                <version>7.25.0</version>
 
                 <executions>
                     <execution>
                         <id>generate-credit-card-client</id>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>generate</goal>
                         </goals>
 
                         <configuration>
+
                             <inputSpec>
                                 ${project.basedir}/src/main/resources/openapi/credit-card-payment-api.yaml
                             </inputSpec>
@@ -256,7 +267,9 @@
 
                             <configOptions>
                                 <dateLibrary>java8</dateLibrary>
+                                <useSpringBoot4>true</useSpringBoot4>
                             </configOptions>
+
                         </configuration>
                     </execution>
                 </executions>

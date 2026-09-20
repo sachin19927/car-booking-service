@@ -15,21 +15,17 @@ public class CreditCardPaymentService implements PaymentService {
     private final DefaultApi creditCardPaymentApi;
 
     @Override
-    public PaymentStatusResponse checkPayment(String paymentReference) {PaymentStatusRetrievalRequest request =
-            new PaymentStatusRetrievalRequest();
+    public PaymentStatusResponse checkPayment(String paymentReference) {
+        PaymentStatusRetrievalRequest request = new PaymentStatusRetrievalRequest();
 
         request.setPaymentReference(paymentReference);
 
-        PaymentStatusResponse response =
-                creditCardPaymentApi.paymentStatusPost(request);
+        PaymentStatusResponse response = creditCardPaymentApi.paymentStatusPost(request);
 
-        if (response.getStatus()
-                != PaymentStatusResponse.StatusEnum.APPROVED) {
+        if (response.getStatus() != PaymentStatusResponse.StatusEnum.APPROVED) {
 
             throw new BusinessValidationException(
-                    ErrorCode.PAYMENT_NOT_APPROVED,
-                    "Credit card payment was not approved"
-            );
+                    ErrorCode.PAYMENT_NOT_APPROVED, "Credit card payment was not approved");
         }
 
         return response;

@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: sachin_hs_123
       POSTGRES_USER: booking-service
     ports:
-      - '5432:5432'
+      - '35432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -20,4 +20,3 @@ services:
       - '9411'
 volumes:
   postgres_data:
-  wiremock_data:

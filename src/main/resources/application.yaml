@@ -1,10 +1,13 @@
 spring:
   application:
     name: car-booking-service
+  docker:
+    compose:
+      enabled: false
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/velocity-motors-carrental}
-    username: ${SPRING_DATASOURCE_USERNAME:booking-service}
-    password: ${SPRING_DATASOURCE_PASSWORD:sachin_hs_123}
+    url: jdbc:postgresql://127.0.0.1:35432/velocity-motors-carrental
+    username: booking-service
+    password: sachin_hs_123
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
@@ -20,3 +23,4 @@ spring:
 
 credit-card-payment:
   base-url: http://localhost:9090/credit-card-payment-api
+

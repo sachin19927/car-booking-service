@@ -10,8 +10,7 @@ import org.springframework.context.annotation.Configuration;
 public class CreditCardPaymentClientConfig {
 
     @Bean
-    public ApiClient creditCardPaymentApiClient(
-            @Value("${credit-card-payment.base-url}") String baseUrl) {
+    public ApiClient creditCardPaymentApiClient(@Value("${credit-card-payment.base-url}") String baseUrl) {
 
         ApiClient apiClient = new ApiClient();
 
