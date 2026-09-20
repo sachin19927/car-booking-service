@@ -7,7 +7,9 @@ import com.motors.velocity.carbookingservice.exception.BusinessValidationExcepti
 import com.motors.velocity.carbookingservice.mapper.BookingMapper;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.ErrorCode;
+import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,15 +26,33 @@ public class BookingService {
     private final BookingMapper bookingMapper;
     private final BookingRepository bookingRepository;
     private final PaymentService paymentService;
+    private final BookingMetrics bookingMetrics;
 
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
-
-        validateBusinessRules(request);
-        CarBooking carBooking = bookingMapper.toBooking(request);
-        processPayment(carBooking);
-        bookingRepository.save(carBooking);
-        return bookingMapper.toBookingResponse(carBooking);
+        Timer.Sample timer = bookingMetrics.startBookingTimer();
+        try {
+            validateBusinessRules(request);
+            CarBooking carBooking = bookingMapper.toBooking(request);
+            processPayment(carBooking);
+            bookingRepository.save(carBooking);
+            bookingMetrics.recordBookingCreated(carBooking.getPaymentMode(), carBooking.getBookingStatus());
+            log.info(
+                    "Booking created bookingId={} vehicleId={} paymentMode={} bookingStatus={}",
+                    carBooking.getBookingId(),
+                    carBooking.getVehicleId(),
+                    carBooking.getPaymentMode(),
+                    carBooking.getBookingStatus());
+            return bookingMapper.toBookingResponse(carBooking);
+        } catch (BusinessValidationException ex) {
+            bookingMetrics.recordBookingFailure(ex.getErrorCode().name());
+            throw ex;
+        } catch (RuntimeException ex) {
+            bookingMetrics.recordBookingFailure(ErrorCode.INTERNAL_SERVER_ERROR.name());
+            throw ex;
+        } finally {
+            bookingMetrics.stopBookingTimer(timer);
+        }
     }
 
     private void validateBusinessRules(BookingRequest request) {
@@ -45,13 +65,12 @@ public class BookingService {
         Instant rentalEnd = request.endDate().toInstant();
         // 3. Validate rental period
         bookingValidator.validateRentalPeriod(rentalStart, rentalEnd);
-        
+
         validatePaymentDetails(request);
-        
+
         // 4. Check vehicle availability
         validateAvailability(request, rentalStart, rentalEnd);
     }
-
 
     private void processPayment(CarBooking booking) {
 

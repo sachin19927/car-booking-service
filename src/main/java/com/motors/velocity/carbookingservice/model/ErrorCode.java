@@ -3,7 +3,6 @@ package com.motors.velocity.carbookingservice.model;
 public enum ErrorCode {
     MAX_RENTAL_DAYS_EXCEEDED,
 
-
     INVALID_RENTAL_PERIOD,
 
     VEHICLE_NOT_FOUND,

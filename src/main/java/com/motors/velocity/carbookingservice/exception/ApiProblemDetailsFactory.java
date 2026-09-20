@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.lang.Nullable;
@@ -13,8 +14,8 @@ public final class ApiProblemDetailsFactory {
     private static final String TIME_STAMP = "timeStamp";
     private static final String TRACE_ID = "traceId";
     private static final String FIELD_ERRORS = "fieldErrors";
-    private static final String REQUEST_TO_HEADER = "X-Request-Id";
-    private static final String TRACE_ID_ATTRIBUTE = "traceId";
+    private static final String REQUEST_ID_HEADER = "X-Request-Id";
+    private static final String REQUEST_ID_ATTRIBUTE = "requestId";
 
     private ApiProblemDetailsFactory() {}
 
@@ -53,12 +54,17 @@ public final class ApiProblemDetailsFactory {
 
     private static String resolveTraceId(HttpServletRequest request) {
 
-        Object traceAttribute = request.getAttribute(TRACE_ID_ATTRIBUTE);
-        if (traceAttribute instanceof String traceId && !traceId.isBlank()) {
+        String traceId = MDC.get("traceId");
+        if (traceId != null && !traceId.isBlank()) {
             return traceId;
         }
 
-        String requestIdHeader = request.getHeader(REQUEST_TO_HEADER);
+        Object requestIdAttribute = request.getAttribute(REQUEST_ID_ATTRIBUTE);
+        if (requestIdAttribute instanceof String requestId && !requestId.isBlank()) {
+            return requestId;
+        }
+
+        String requestIdHeader = request.getHeader(REQUEST_ID_HEADER);
         if (requestIdHeader != null && !requestIdHeader.isBlank()) {
             return requestIdHeader;
         }

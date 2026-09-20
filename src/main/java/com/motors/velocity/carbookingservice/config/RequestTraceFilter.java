@@ -29,11 +29,10 @@ public class RequestTraceFilter extends OncePerRequestFilter {
             requestId = UUID.randomUUID().toString();
         }
 
+        request.setAttribute(REQUEST_ID, requestId);
         response.setHeader(REQUEST_ID_HEADER, requestId);
 
-        try (MDC.MDCCloseable ignored =
-                     MDC.putCloseable(REQUEST_ID, requestId)) {
-
+        try (MDC.MDCCloseable ignored = MDC.putCloseable(REQUEST_ID, requestId)) {
             filterChain.doFilter(request, response);
         }
     }
