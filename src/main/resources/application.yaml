@@ -23,4 +23,17 @@ spring:
 
 credit-card-payment:
   base-url: http://localhost:9090/credit-card-payment-api
+  timeout:
+    connect: 2s
+    read: 3s
 
+
+resilience4j:
+  retry:
+    instances:
+      creditCardPayment:
+        max-attempts: 3
+        wait-duration: 1s
+        retry-exceptions:
+          - com.motors.velocity.carbookingservice.exception.TransientPaymentServiceException
+          - org.springframework.web.client.ResourceAccessException

@@ -1,6 +1,5 @@
 package com.motors.velocity.carbookingservice.service;
 
-import com.motors.velocity.carbookingservice.client.payment.api.DefaultApi;
 import com.motors.velocity.carbookingservice.dto.BookingRequest;
 import com.motors.velocity.carbookingservice.dto.BookingResponse;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
@@ -24,7 +23,6 @@ public class BookingService {
     private final BookingValidator bookingValidator;
     private final BookingMapper bookingMapper;
     private final BookingRepository bookingRepository;
-    private final DefaultApi creditCardPaymentApi;
     private final PaymentService paymentService;
 
     @Transactional
@@ -64,7 +62,7 @@ public class BookingService {
     private void processPayment(CarBooking booking) {
 
         switch (booking.getPaymentMode()) {
-            case CASH -> booking.confirm();
+            case CASH, DIGITAL_WALLET -> booking.confirm();
 
             case CREDIT_CARD -> processCreditCardPayment(booking);
 

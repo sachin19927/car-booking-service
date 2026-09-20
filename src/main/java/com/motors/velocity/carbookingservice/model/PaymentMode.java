@@ -2,6 +2,7 @@ package com.motors.velocity.carbookingservice.model;
 
 public enum PaymentMode {
     CASH(false),
+    DIGITAL_WALLET(false),
     CREDIT_CARD(true),
     BANK_TRANSFER(true);
 

@@ -54,9 +54,10 @@ public class GlobalExceptionHandler {
                 ? ApiProblemType.RESOURCE_NOT_FOUND
                 : ApiProblemType.BUSINESS_VALIDATION;
         String title = ex instanceof ResourceNotFoundException ? "Resource Not Found" : "Business validation Failed";
-        return ResponseEntity.badRequest()
+
+        return ResponseEntity.status(ex.getStatus())
                 .body(ApiProblemDetailsFactory.create(
-                        HttpStatus.BAD_REQUEST,
+                        ex.getStatus(),
                         problemType,
                         title,
                         ex.getMessage(),
