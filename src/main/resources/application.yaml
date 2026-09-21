@@ -5,9 +5,9 @@ spring:
     compose:
       enabled: false
   datasource:
-    url: jdbc:postgresql://127.0.0.1:35432/velocity-motors-carrental
-    username: booking-service
-    password: sachin_hs_123
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:35432/velocity-motors-carrental}
+    username: ${DB_USERNAME:booking-service}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
@@ -35,7 +35,6 @@ spring:
       ack-mode: record
       missing-topics-fatal: false
 
-
 app:
   kafka:
     listener:
@@ -53,20 +52,26 @@ app:
   booking:
     cancellation:
       fixed-delay: ${BOOKING_CANCELLATION_FIXED_DELAY:60000}
+      batch-size: ${BOOKING_CANCELLATION_BATCH_SIZE:500}
+  pricing:
+    daily-rate:
+      compact: ${PRICE_COMPACT_PER_DAY:50.00}
+      sedan: ${PRICE_SEDAN_PER_DAY:70.00}
+      suv: ${PRICE_SUV_PER_DAY:90.00}
+      luxury: ${PRICE_LUXURY_PER_DAY:120.00}
 
 credit-card-payment:
-  base-url: http://localhost:9090/credit-card-payment-api
+  base-url: ${CREDIT_CARD_PAYMENT_BASE_URL:http://localhost:9090/credit-card-payment-api}
   timeout:
-    connect: 2s
-    read: 3s
-
+    connect: ${CREDIT_CARD_PAYMENT_CONNECT_TIMEOUT:2s}
+    read: ${CREDIT_CARD_PAYMENT_READ_TIMEOUT:3s}
 
 resilience4j:
   retry:
     instances:
       creditCardPayment:
-        max-attempts: 3
-        wait-duration: 1s
+        max-attempts: ${CREDIT_CARD_RETRY_MAX_ATTEMPTS:3}
+        wait-duration: ${CREDIT_CARD_RETRY_WAIT:1s}
         enable-exponential-backoff: true
         exponential-backoff-multiplier: 2
         enable-randomized-wait: true

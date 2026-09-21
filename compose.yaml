@@ -1,19 +1,20 @@
 services:
   postgres:
-    image: 'postgres:18-alpine'
+    image: postgres:18-alpine
     environment:
-      POSTGRES_DB: velocity-motors-carrental
-      POSTGRES_PASSWORD: sachin_hs_123
-      POSTGRES_USER: booking-service
+      POSTGRES_DB: ${POSTGRES_DB:-velocity-motors-carrental}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_USER: ${POSTGRES_USER:-booking-service}
     ports:
-      - '35432:5432'
+      - "35432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U booking-service -d velocity-motors-carrental"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-booking-service} -d ${POSTGRES_DB:-velocity-motors-carrental}"]
       interval: 5s
       timeout: 5s
       retries: 10
+
   kafka:
     image: apache/kafka:4.0.0
     hostname: kafka
@@ -37,9 +38,10 @@ services:
       - kafka_data:/var/lib/kafka/data
 
   zipkin:
-    image: 'openzipkin/zipkin:latest'
+    image: openzipkin/zipkin:latest
     ports:
-      - '9411:9411'
+      - "9411:9411"
+
 volumes:
   postgres_data:
   kafka_data:

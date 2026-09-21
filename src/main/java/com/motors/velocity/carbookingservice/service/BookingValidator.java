@@ -13,6 +13,11 @@ public class BookingValidator {
 
     public void validateRentalPeriod(Instant rentalStart, Instant rentalEnd) {
 
+        if (rentalStart.isBefore(Instant.now())) {
+            throw new BusinessValidationException(
+                    ErrorCode.INVALID_RENTAL_PERIOD, "Start date cannot be previous dates");
+        }
+
         if (!rentalStart.isBefore(rentalEnd)) {
             throw new BusinessValidationException(
                     ErrorCode.INVALID_RENTAL_PERIOD,

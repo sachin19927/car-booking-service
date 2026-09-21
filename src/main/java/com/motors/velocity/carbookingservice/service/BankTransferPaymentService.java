@@ -6,6 +6,7 @@ import com.motors.velocity.carbookingservice.exception.InvalidBankTransferPaymen
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
+import com.motors.velocity.carbookingservice.repository.BankTransferPaymentEventRepository;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
 import java.time.Instant;
 import java.util.Optional;
@@ -25,6 +26,7 @@ public class BankTransferPaymentService {
     private static final Pattern TRANSACTION_DETAILS_PATTERN = Pattern.compile("^(\\S{12})\\s+([A-Za-z0-9-]{10,36})$");
 
     private final BookingRepository bookingRepository;
+    private final BankTransferPaymentEventRepository paymentEventRepository;
     private final BookingMetrics bookingMetrics;
 
     @Transactional
@@ -54,18 +56,45 @@ public class BankTransferPaymentService {
                     "Unsupported booking state for bank transfer payment: " + booking.getBookingStatus());
         }
 
-        int updated = bookingRepository.confirmPendingBankTransfer(
-                booking.getBookingId(), event.paymentAmount(), Instant.now());
+        Instant receivedAt = Instant.now();
+        int inserted = paymentEventRepository.insertIfAbsent(
+                UUID.randomUUID(), event.paymentId(), booking.getBookingId(), event.paymentAmount(), receivedAt);
 
-        if (updated == 1) {
+        if (inserted == 0) {
+            bookingMetrics.recordBankTransferEventIgnored("duplicate_payment_event");
+            log.info(
+                    "Ignoring duplicate bank transfer paymentId={} bookingId={}",
+                    event.paymentId(),
+                    booking.getBookingId());
+            return;
+        }
+
+        int updated =
+                bookingRepository.applyBankTransferPayment(booking.getBookingId(), event.paymentAmount(), receivedAt);
+
+        if (updated != 1) {
+            bookingMetrics.recordBankTransferEventIgnored("concurrent_state_change");
+            return;
+        }
+
+        CarBooking updatedBooking =
+                bookingRepository.findById(booking.getBookingId()).orElseThrow();
+        if (updatedBooking.getBookingStatus() == BookingStatus.CONFIRMED) {
             bookingMetrics.recordBankTransferConfirmed();
             log.info(
-                    "Bank transfer payment confirmed bookingId={} paymentId={} amount={}",
-                    booking.getBookingId(),
+                    "Bank transfer payment fully confirmed bookingId={} paymentId={} amountReceived={} totalAmount={}",
+                    updatedBooking.getBookingId(),
                     event.paymentId(),
-                    event.paymentAmount());
+                    updatedBooking.getPaymentReceivedAmount(),
+                    updatedBooking.getTotalAmount());
         } else {
-            bookingMetrics.recordBankTransferEventIgnored("concurrent_state_change");
+            bookingMetrics.recordBankTransferPartialPayment();
+            log.info(
+                    "Bank transfer partial payment recorded bookingId={} paymentId={} amountReceived={} totalAmount={}",
+                    updatedBooking.getBookingId(),
+                    event.paymentId(),
+                    updatedBooking.getPaymentReceivedAmount(),
+                    updatedBooking.getTotalAmount());
         }
     }
 

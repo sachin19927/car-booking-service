@@ -134,6 +134,17 @@ public class BookingMetrics {
         recordBankTransferEventCounter("confirmed");
     }
 
+    public void recordBankTransferPartialPayment() {
+        recordBankTransferEventCounter("partial_payment");
+    }
+
+    public void recordIdempotentReplay() {
+        Counter.builder("booking.idempotency.replay.total")
+                .description("Number of booking requests served from an existing idempotent booking")
+                .register(meterRegistry)
+                .increment();
+    }
+
     private void recordBankTransferEventCounter(String outcome) {
         bankTransferEventCounters
                 .computeIfAbsent(

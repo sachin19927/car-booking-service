@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -31,6 +32,8 @@ public interface BookingRepository extends JpaRepository<CarBooking, UUID> {
 
     Optional<CarBooking> findByPaymentModeAndPaymentReference(PaymentMode paymentMode, String paymentReference);
 
+    Optional<CarBooking> findByIdempotencyKey(String idempotencyKey);
+
     @Query("""
         SELECT b FROM CarBooking b
         WHERE b.paymentMode = com.motors.velocity.carbookingservice.model.PaymentMode.BANK_TRANSFER
@@ -38,18 +41,22 @@ public interface BookingRepository extends JpaRepository<CarBooking, UUID> {
           AND b.paymentDeadline <= :now
         ORDER BY b.paymentDeadline ASC
         """)
-    List<CarBooking> findPendingBankTransferBookingsDueForCancellation(@Param("now") Instant now);
+    List<CarBooking> findPendingBankTransferBookingsDueForCancellation(@Param("now") Instant now, Pageable pageable);
 
     @Modifying
     @Query("""
         UPDATE CarBooking b
-        SET b.bookingStatus = com.motors.velocity.carbookingservice.model.BookingStatus.CONFIRMED,
-            b.paymentReceivedAmount = :paymentAmount,
-            b.paymentReceivedAt = :receivedAt
+        SET b.paymentReceivedAmount = COALESCE(b.paymentReceivedAmount, 0) + :paymentAmount,
+            b.paymentReceivedAt = :receivedAt,
+            b.bookingStatus = CASE
+                WHEN COALESCE(b.paymentReceivedAmount, 0) + :paymentAmount >= b.totalAmount
+                    THEN com.motors.velocity.carbookingservice.model.BookingStatus.CONFIRMED
+                ELSE com.motors.velocity.carbookingservice.model.BookingStatus.PENDING_PAYMENT
+            END
         WHERE b.bookingId = :bookingId
           AND b.bookingStatus = com.motors.velocity.carbookingservice.model.BookingStatus.PENDING_PAYMENT
         """)
-    int confirmPendingBankTransfer(
+    int applyBankTransferPayment(
             @Param("bookingId") UUID bookingId,
             @Param("paymentAmount") BigDecimal paymentAmount,
             @Param("receivedAt") Instant receivedAt);

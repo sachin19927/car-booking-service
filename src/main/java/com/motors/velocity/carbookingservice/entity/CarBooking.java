@@ -4,6 +4,7 @@ import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.model.VehicleCategory;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
@@ -61,11 +62,20 @@ public class CarBooking {
     @Column(name = "payment_deadline")
     private Instant paymentDeadline;
 
+    @Column(name = "total_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal totalAmount;
+
     @Column(name = "payment_received_amount", precision = 19, scale = 2)
-    private java.math.BigDecimal paymentReceivedAmount;
+    private BigDecimal paymentReceivedAmount;
 
     @Column(name = "payment_received_at")
     private Instant paymentReceivedAt;
+
+    @Column(name = "idempotency_key", length = 100, unique = true)
+    private String idempotencyKey;
+
+    @Column(name = "request_fingerprint", length = 64)
+    private String requestFingerprint;
 
     @PrePersist
     protected void onCreate() {
