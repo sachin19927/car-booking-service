@@ -3,8 +3,10 @@ package com.motors.velocity.carbookingservice.listener;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.motors.velocity.carbookingservice.dto.BankTransferPaymentEvent;
 import com.motors.velocity.carbookingservice.exception.InvalidBankTransferPaymentEventException;
+import com.motors.velocity.carbookingservice.model.BookingConstants;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.service.BankTransferPaymentService;
+import com.motors.velocity.carbookingservice.service.CompositeBookingValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,14 +21,16 @@ import org.springframework.stereotype.Component;
 public class BankTransferPaymentEventConsumer {
 
     private final ObjectMapper objectMapper;
+    private final CompositeBookingValidator compositeBookingValidator;
     private final BankTransferPaymentService paymentService;
     private final BookingMetrics bookingMetrics;
 
-    @Value("${app.kafka.bank-transfer-payment-events.topic:bank-transfer-payment-events}")
+    @Value("${app.kafka.bank-transfer-payment-events.topic:" + BookingConstants.BANK_TRANSFER_EVENTS_TOPIC + "}")
     private String topic;
 
     @KafkaListener(
-            topics = "${app.kafka.bank-transfer-payment-events.topic:bank-transfer-payment-events}",
+            topics = "${app.kafka.bank-transfer-payment-events.topic:" + BookingConstants.BANK_TRANSFER_EVENTS_TOPIC
+                    + "}",
             groupId = "${app.kafka.consumer.group-id:car-booking-service}",
             containerFactory = "bankTransferKafkaListenerContainerFactory")
     public void consume(String payload) {
@@ -52,15 +56,7 @@ public class BankTransferPaymentEventConsumer {
         }
         try {
             BankTransferPaymentEvent event = objectMapper.readValue(payload, BankTransferPaymentEvent.class);
-            if (event.paymentId() == null || event.paymentId().isBlank()) {
-                throw new InvalidBankTransferPaymentEventException("paymentId is required");
-            }
-            if (event.paymentAmount() == null || event.paymentAmount().signum() <= 0) {
-                throw new InvalidBankTransferPaymentEventException("paymentAmount must be greater than zero");
-            }
-            if (event.transactionDetails() == null || event.transactionDetails().isBlank()) {
-                throw new InvalidBankTransferPaymentEventException("transactionDetails is required");
-            }
+            compositeBookingValidator.validateBankTransferPaymentEvent(event);
             return event;
         } catch (InvalidBankTransferPaymentEventException ex) {
             throw ex;

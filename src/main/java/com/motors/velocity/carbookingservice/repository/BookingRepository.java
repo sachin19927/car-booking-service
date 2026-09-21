@@ -36,12 +36,16 @@ public interface BookingRepository extends JpaRepository<CarBooking, UUID> {
 
     @Query("""
         SELECT b FROM CarBooking b
-        WHERE b.paymentMode = com.motors.velocity.carbookingservice.model.PaymentMode.BANK_TRANSFER
-          AND b.bookingStatus = com.motors.velocity.carbookingservice.model.BookingStatus.PENDING_PAYMENT
+        WHERE b.paymentMode = :paymentMode
+          AND b.bookingStatus = :status
           AND b.paymentDeadline <= :now
         ORDER BY b.paymentDeadline ASC
         """)
-    List<CarBooking> findPendingBankTransferBookingsDueForCancellation(@Param("now") Instant now, Pageable pageable);
+    List<CarBooking> findPendingBankTransferBookingsDueForCancellation(
+            @Param("paymentMode") PaymentMode paymentMode,
+            @Param("status") BookingStatus status,
+            @Param("now") Instant now,
+            Pageable pageable);
 
     @Modifying
     @Query("""

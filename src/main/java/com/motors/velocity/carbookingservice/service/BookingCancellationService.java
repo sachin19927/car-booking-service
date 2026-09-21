@@ -1,6 +1,8 @@
 package com.motors.velocity.carbookingservice.service;
 
 import com.motors.velocity.carbookingservice.entity.CarBooking;
+import com.motors.velocity.carbookingservice.model.BookingStatus;
+import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
 import java.time.Instant;
@@ -37,7 +39,7 @@ public class BookingCancellationService {
 
         while (true) {
             List<CarBooking> dueBookings = bookingRepository.findPendingBankTransferBookingsDueForCancellation(
-                    now, PageRequest.of(0, safeBatchSize));
+                    PaymentMode.BANK_TRANSFER, BookingStatus.PENDING_PAYMENT, now, PageRequest.of(0, safeBatchSize));
             if (dueBookings.isEmpty()) {
                 return cancelled;
             }

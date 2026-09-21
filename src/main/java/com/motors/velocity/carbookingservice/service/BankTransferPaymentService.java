@@ -3,6 +3,7 @@ package com.motors.velocity.carbookingservice.service;
 import com.motors.velocity.carbookingservice.dto.BankTransferPaymentEvent;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
 import com.motors.velocity.carbookingservice.exception.InvalidBankTransferPaymentEventException;
+import com.motors.velocity.carbookingservice.model.BookingConstants;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
@@ -34,68 +35,22 @@ public class BankTransferPaymentService {
         TransactionDetails details = parseTransactionDetails(event.transactionDetails());
         CarBooking booking = findBooking(details, event);
 
-        if (booking.getPaymentMode() != PaymentMode.BANK_TRANSFER) {
-            throw new InvalidBankTransferPaymentEventException(
-                    "Payment event does not belong to a bank transfer booking");
-        }
-
-        if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
-            bookingMetrics.recordBankTransferEventIgnored("booking_cancelled");
-            log.info("Ignoring late bank transfer payment bookingId={}", booking.getBookingId());
+        if (shouldIgnoreBookingState(booking)) {
             return;
         }
-
-        if (booking.getBookingStatus() == BookingStatus.CONFIRMED) {
-            bookingMetrics.recordBankTransferEventIgnored("already_confirmed");
-            log.info("Ignoring duplicate bank transfer payment bookingId={}", booking.getBookingId());
-            return;
-        }
-
-        if (booking.getBookingStatus() != BookingStatus.PENDING_PAYMENT) {
-            throw new InvalidBankTransferPaymentEventException(
-                    "Unsupported booking state for bank transfer payment: " + booking.getBookingStatus());
-        }
-
+        validateBookingState(booking);
         Instant receivedAt = Instant.now();
-        int inserted = paymentEventRepository.insertIfAbsent(
-                UUID.randomUUID(), event.paymentId(), booking.getBookingId(), event.paymentAmount(), receivedAt);
 
-        if (inserted == 0) {
-            bookingMetrics.recordBankTransferEventIgnored("duplicate_payment_event");
-            log.info(
-                    "Ignoring duplicate bank transfer paymentId={} bookingId={}",
-                    event.paymentId(),
-                    booking.getBookingId());
+        if (isDuplicatePaymentEvent(event, booking, receivedAt)) {
             return;
         }
 
-        int updated =
-                bookingRepository.applyBankTransferPayment(booking.getBookingId(), event.paymentAmount(), receivedAt);
-
-        if (updated != 1) {
+        if (!applyPayment(event, booking, receivedAt)) {
             bookingMetrics.recordBankTransferEventIgnored("concurrent_state_change");
             return;
         }
 
-        CarBooking updatedBooking =
-                bookingRepository.findById(booking.getBookingId()).orElseThrow();
-        if (updatedBooking.getBookingStatus() == BookingStatus.CONFIRMED) {
-            bookingMetrics.recordBankTransferConfirmed();
-            log.info(
-                    "Bank transfer payment fully confirmed bookingId={} paymentId={} amountReceived={} totalAmount={}",
-                    updatedBooking.getBookingId(),
-                    event.paymentId(),
-                    updatedBooking.getPaymentReceivedAmount(),
-                    updatedBooking.getTotalAmount());
-        } else {
-            bookingMetrics.recordBankTransferPartialPayment();
-            log.info(
-                    "Bank transfer partial payment recorded bookingId={} paymentId={} amountReceived={} totalAmount={}",
-                    updatedBooking.getBookingId(),
-                    event.paymentId(),
-                    updatedBooking.getPaymentReceivedAmount(),
-                    updatedBooking.getTotalAmount());
-        }
+        logPaymentOutcome(event, reloadBooking(booking));
     }
 
     private CarBooking findBooking(TransactionDetails details, BankTransferPaymentEvent event) {
@@ -123,10 +78,80 @@ public class BankTransferPaymentService {
     private TransactionDetails parseTransactionDetails(String value) {
         Matcher matcher = TRANSACTION_DETAILS_PATTERN.matcher(value.trim());
         if (!matcher.matches()) {
-            throw new InvalidBankTransferPaymentEventException(
-                    "transactionDetails must have format <TxnRef(12 chars)> <BookingId>");
+            throw new InvalidBankTransferPaymentEventException(BookingConstants.TRANSACTION_DETAILS_FORMAT_MESSAGE);
         }
         return new TransactionDetails(matcher.group(1), matcher.group(2));
+    }
+
+    private boolean shouldIgnoreBookingState(CarBooking booking) {
+        if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+            bookingMetrics.recordBankTransferEventIgnored("booking_cancelled");
+            log.info("Ignoring late bank transfer payment bookingId={}", booking.getBookingId());
+            return true;
+        }
+
+        if (booking.getBookingStatus() == BookingStatus.CONFIRMED) {
+            bookingMetrics.recordBankTransferEventIgnored("already_confirmed");
+            log.info("Ignoring duplicate bank transfer payment bookingId={}", booking.getBookingId());
+            return true;
+        }
+        return false;
+    }
+
+    private void validateBookingState(CarBooking booking) {
+        if (booking.getPaymentMode() != PaymentMode.BANK_TRANSFER) {
+            throw new InvalidBankTransferPaymentEventException(
+                    "Payment event does not belong to a bank transfer booking");
+        }
+
+        if (booking.getBookingStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new InvalidBankTransferPaymentEventException(
+                    "Unsupported booking state for bank transfer payment: " + booking.getBookingStatus());
+        }
+    }
+
+    private boolean isDuplicatePaymentEvent(BankTransferPaymentEvent event, CarBooking booking, Instant receivedAt) {
+        int inserted = paymentEventRepository.insertIfAbsent(
+                UUID.randomUUID(), event.paymentId(), booking.getBookingId(), event.paymentAmount(), receivedAt);
+
+        if (inserted == 0) {
+            bookingMetrics.recordBankTransferEventIgnored("duplicate_payment_event");
+            log.info(
+                    "Ignoring duplicate bank transfer paymentId={} bookingId={}",
+                    event.paymentId(),
+                    booking.getBookingId());
+            return true;
+        }
+        return false;
+    }
+
+    private boolean applyPayment(BankTransferPaymentEvent event, CarBooking booking, Instant receivedAt) {
+        return bookingRepository.applyBankTransferPayment(booking.getBookingId(), event.paymentAmount(), receivedAt)
+                == 1;
+    }
+
+    private CarBooking reloadBooking(CarBooking booking) {
+        return bookingRepository.findById(booking.getBookingId()).orElseThrow();
+    }
+
+    private void logPaymentOutcome(BankTransferPaymentEvent event, CarBooking updatedBooking) {
+        if (updatedBooking.getBookingStatus() == BookingStatus.CONFIRMED) {
+            bookingMetrics.recordBankTransferConfirmed();
+            log.info(
+                    "Bank transfer payment fully confirmed bookingId={} paymentId={} amountReceived={} totalAmount={}",
+                    updatedBooking.getBookingId(),
+                    event.paymentId(),
+                    updatedBooking.getPaymentReceivedAmount(),
+                    updatedBooking.getTotalAmount());
+            return;
+        }
+        bookingMetrics.recordBankTransferPartialPayment();
+        log.info(
+                "Bank transfer partial payment recorded bookingId={} paymentId={} amountReceived={} totalAmount={}",
+                updatedBooking.getBookingId(),
+                event.paymentId(),
+                updatedBooking.getPaymentReceivedAmount(),
+                updatedBooking.getTotalAmount());
     }
 
     private record TransactionDetails(String transactionReference, String bookingIdentifier) {}

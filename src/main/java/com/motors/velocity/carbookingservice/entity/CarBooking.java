@@ -1,5 +1,6 @@
 package com.motors.velocity.carbookingservice.entity;
 
+import com.motors.velocity.carbookingservice.model.BookingConstants;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.model.VehicleCategory;
@@ -98,7 +99,6 @@ public class CarBooking {
     }
 
     public void setPaymentDeadlineFromRentalStart() {
-        this.paymentDeadline =
-                rentalStart.minusSeconds(java.time.Duration.ofHours(48).toSeconds());
+        this.paymentDeadline = rentalStart.minus(BookingConstants.PAYMENT_DEADLINE_BEFORE_RENTAL);
     }
 }

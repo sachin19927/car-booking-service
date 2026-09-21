@@ -1,6 +1,7 @@
 package com.motors.velocity.carbookingservice.config;
 
 import com.motors.velocity.carbookingservice.exception.InvalidBankTransferPaymentEventException;
+import com.motors.velocity.carbookingservice.model.BookingConstants;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +23,9 @@ public class KafkaConfig {
     NewTopic bankTransferPaymentEventsTopic(
             @Value("${app.kafka.bank-transfer-payment-events.partitions:3}") int partitions,
             @Value("${app.kafka.bank-transfer-payment-events.replication-factor:1}") short replicationFactor,
-            @Value("${app.kafka.bank-transfer-payment-events.topic:bank-transfer-payment-events}") String topic) {
+            @Value("${app.kafka.bank-transfer-payment-events.topic:" + BookingConstants.BANK_TRANSFER_EVENTS_TOPIC
+                            + "}")
+                    String topic) {
         return new NewTopic(topic, partitions, replicationFactor);
     }
 
@@ -30,7 +33,8 @@ public class KafkaConfig {
     NewTopic bankTransferPaymentEventsDltTopic(
             @Value("${app.kafka.bank-transfer-payment-events.partitions:3}") int partitions,
             @Value("${app.kafka.bank-transfer-payment-events.replication-factor:1}") short replicationFactor,
-            @Value("${app.kafka.bank-transfer-payment-events.dlt-topic:bank-transfer-payment-events.DLT}")
+            @Value("${app.kafka.bank-transfer-payment-events.dlt-topic:" + BookingConstants.BANK_TRANSFER_DLT_TOPIC
+                            + "}")
                     String topic) {
         return new NewTopic(topic, partitions, replicationFactor);
     }
@@ -40,7 +44,8 @@ public class KafkaConfig {
             KafkaTemplate<String, String> kafkaTemplate,
             @Value("${app.kafka.consumer.retry.max-attempts:3}") int maxAttempts,
             @Value("${app.kafka.consumer.retry.initial-backoff:1000ms}") java.time.Duration initialBackoff,
-            @Value("${app.kafka.bank-transfer-payment-events.dlt-topic:bank-transfer-payment-events.DLT}")
+            @Value("${app.kafka.bank-transfer-payment-events.dlt-topic:" + BookingConstants.BANK_TRANSFER_DLT_TOPIC
+                            + "}")
                     String dltTopic) {
 
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(

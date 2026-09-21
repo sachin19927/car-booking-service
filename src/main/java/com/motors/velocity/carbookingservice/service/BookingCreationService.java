@@ -5,13 +5,11 @@ import com.motors.velocity.carbookingservice.dto.BookingResponse;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
 import com.motors.velocity.carbookingservice.exception.BusinessValidationException;
 import com.motors.velocity.carbookingservice.mapper.BookingMapper;
-import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.ErrorCode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
 import io.micrometer.core.instrument.Timer;
 import java.math.BigDecimal;
-import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,8 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BookingCreationService {
 
-    private final VehicleService vehicleService;
-    private final BookingValidator bookingValidator;
+    private final CompositeBookingValidator compositeBookingValidator;
     private final BookingMapper bookingMapper;
     private final BookingRepository bookingRepository;
     private final PaymentService paymentService;
@@ -62,12 +59,7 @@ public class BookingCreationService {
     }
 
     private void validateBusinessRules(BookingRequest request) {
-        vehicleService.validateVehicle(request.vehicleId());
-        Instant rentalStart = request.startDate().toInstant();
-        Instant rentalEnd = request.endDate().toInstant();
-        bookingValidator.validateRentalPeriod(rentalStart, rentalEnd);
-        validatePaymentDetails(request);
-        validateAvailability(request, rentalStart, rentalEnd);
+        compositeBookingValidator.validateBookingRequest(request);
     }
 
     private void processPayment(CarBooking booking) {
@@ -75,26 +67,6 @@ public class BookingCreationService {
             case CASH, DIGITAL_WALLET -> booking.confirm();
             case CREDIT_CARD -> processCreditCardPayment(booking);
             case BANK_TRANSFER -> processBankTransferPayment(booking);
-        }
-    }
-
-    private void validatePaymentDetails(BookingRequest request) {
-        if (request.paymentMethod().requiresPaymentReference()
-                && (request.paymentReference() == null
-                        || request.paymentReference().isBlank())) {
-            throw new BusinessValidationException(
-                    ErrorCode.PAYMENT_REFERENCE_REQUIRED,
-                    "Payment reference is required for " + request.paymentMethod());
-        }
-    }
-
-    private void validateAvailability(BookingRequest request, Instant rentalStart, Instant rentalEnd) {
-        boolean alreadyBooked = bookingRepository.existsOverlappingBooking(
-                request.vehicleId(), rentalStart, rentalEnd, BookingStatus.CANCELLED);
-        if (alreadyBooked) {
-            throw new BusinessValidationException(
-                    ErrorCode.VEHICLE_UNAVAILABLE,
-                    "Vehicle " + request.vehicleId() + " is not available for the requested period");
         }
     }
 

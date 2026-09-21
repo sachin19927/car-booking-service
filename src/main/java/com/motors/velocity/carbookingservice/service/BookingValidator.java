@@ -1,6 +1,7 @@
 package com.motors.velocity.carbookingservice.service;
 
 import com.motors.velocity.carbookingservice.exception.BusinessValidationException;
+import com.motors.velocity.carbookingservice.model.BookingConstants;
 import com.motors.velocity.carbookingservice.model.ErrorCode;
 import java.time.Duration;
 import java.time.Instant;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class BookingValidator {
 
-    private static final Duration MAX_RENTAL_DURATION = Duration.ofDays(21);
+    private static final Duration MAX_RENTAL_DURATION = Duration.ofDays(BookingConstants.MAX_RENTAL_DAYS);
 
     public void validateRentalPeriod(Instant rentalStart, Instant rentalEnd) {
 
