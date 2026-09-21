@@ -21,6 +21,39 @@ spring:
     enabled: true
     validate-on-migrate: true
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:car-booking-service}
+      auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:earliest}
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        isolation.level: read_committed
+    listener:
+      ack-mode: record
+      missing-topics-fatal: false
+
+
+app:
+  kafka:
+    listener:
+      concurrency: ${KAFKA_LISTENER_CONCURRENCY:3}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:car-booking-service}
+      retry:
+        max-attempts: ${KAFKA_RETRY_MAX_ATTEMPTS:3}
+        initial-backoff: ${KAFKA_RETRY_INITIAL_BACKOFF:1s}
+    bank-transfer-payment-events:
+      topic: ${BANK_TRANSFER_PAYMENT_EVENTS_TOPIC:bank-transfer-payment-events}
+      dlt-topic: ${BANK_TRANSFER_PAYMENT_EVENTS_DLT_TOPIC:bank-transfer-payment-events.DLT}
+      partitions: ${BANK_TRANSFER_PAYMENT_EVENTS_PARTITIONS:3}
+      replication-factor: ${BANK_TRANSFER_PAYMENT_EVENTS_REPLICATION_FACTOR:1}
+  booking:
+    cancellation:
+      fixed-delay: ${BOOKING_CANCELLATION_FIXED_DELAY:60000}
+
 credit-card-payment:
   base-url: http://localhost:9090/credit-card-payment-api
   timeout:

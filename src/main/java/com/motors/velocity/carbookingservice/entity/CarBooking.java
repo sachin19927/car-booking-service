@@ -58,6 +58,15 @@ public class CarBooking {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "payment_deadline")
+    private Instant paymentDeadline;
+
+    @Column(name = "payment_received_amount", precision = 19, scale = 2)
+    private java.math.BigDecimal paymentReceivedAmount;
+
+    @Column(name = "payment_received_at")
+    private Instant paymentReceivedAt;
+
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
@@ -76,5 +85,10 @@ public class CarBooking {
 
     public void paymentPending() {
         this.bookingStatus = BookingStatus.PENDING_PAYMENT;
+    }
+
+    public void setPaymentDeadlineFromRentalStart() {
+        this.paymentDeadline =
+                rentalStart.minusSeconds(java.time.Duration.ofHours(48).toSeconds());
     }
 }

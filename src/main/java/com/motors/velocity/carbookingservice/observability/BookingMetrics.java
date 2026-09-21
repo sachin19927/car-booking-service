@@ -18,6 +18,7 @@ public class BookingMetrics {
     private final ConcurrentMap<String, Counter> bookingCreatedCounters = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Counter> bookingFailureCounters = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Counter> creditCardOutcomeCounters = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Counter> bankTransferEventCounters = new ConcurrentHashMap<>();
 
     public Timer.Sample startBookingTimer() {
         return Timer.start(meterRegistry);
@@ -50,6 +51,14 @@ public class BookingMetrics {
                 .increment();
     }
 
+    public void recordBookingCancellation() {
+        Counter.builder("booking.cancellation.total")
+                .description("Number of bank transfer bookings automatically cancelled")
+                .tag("reason", "payment_deadline")
+                .register(meterRegistry)
+                .increment();
+    }
+
     public Timer.Sample startCreditCardTimer() {
         return Timer.start(meterRegistry);
     }
@@ -64,6 +73,73 @@ public class BookingMetrics {
                         outcome,
                         key -> Counter.builder("credit_card.payment.total")
                                 .description("Credit card payment validation outcomes")
+                                .tag("outcome", outcome)
+                                .register(meterRegistry))
+                .increment();
+    }
+
+    public void recordCreditCardRetry() {
+        Counter.builder("credit_card.payment.retry.total")
+                .description("Number of credit card payment retry attempts")
+                .register(meterRegistry)
+                .increment();
+    }
+
+    public void recordCreditCardRetryExhausted() {
+        Counter.builder("credit_card.payment.retry.exhausted.total")
+                .description("Number of credit card payment retry sequences exhausted")
+                .register(meterRegistry)
+                .increment();
+    }
+
+    public void recordCreditCardRetrySuccess() {
+        Counter.builder("credit_card.payment.retry.success.total")
+                .description("Number of credit card payment retry sequences eventually successful")
+                .register(meterRegistry)
+                .increment();
+    }
+
+    public void recordBankTransferEventReceived() {
+        bankTransferEventCounters
+                .computeIfAbsent(
+                        "received",
+                        key -> Counter.builder("bank_transfer.payment_event.total")
+                                .description("Bank transfer payment events received")
+                                .tag("outcome", "received")
+                                .register(meterRegistry))
+                .increment();
+    }
+
+    public void recordBankTransferEventProcessed() {
+        recordBankTransferEventCounter("processed");
+    }
+
+    public void recordBankTransferEventFailed(String reason) {
+        Counter.builder("bank_transfer.payment_event.failure.total")
+                .description("Bank transfer payment event processing failures")
+                .tag("reason", reason)
+                .register(meterRegistry)
+                .increment();
+    }
+
+    public void recordBankTransferEventIgnored(String reason) {
+        Counter.builder("bank_transfer.payment_event.ignored.total")
+                .description("Bank transfer payment events intentionally ignored")
+                .tag("reason", reason)
+                .register(meterRegistry)
+                .increment();
+    }
+
+    public void recordBankTransferConfirmed() {
+        recordBankTransferEventCounter("confirmed");
+    }
+
+    private void recordBankTransferEventCounter(String outcome) {
+        bankTransferEventCounters
+                .computeIfAbsent(
+                        outcome,
+                        key -> Counter.builder("bank_transfer.payment_event.total")
+                                .description("Bank transfer payment event processing outcomes")
                                 .tag("outcome", outcome)
                                 .register(meterRegistry))
                 .increment();
