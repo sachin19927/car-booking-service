@@ -11,6 +11,7 @@ import com.motors.velocity.carbookingservice.client.payment.api.DefaultApi;
 import com.motors.velocity.carbookingservice.client.payment.model.PaymentStatusResponse;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
+import com.motors.velocity.carbookingservice.repository.BankTransferPaymentEventRepository;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
 import com.motors.velocity.carbookingservice.service.BankTransferPaymentService;
 import com.motors.velocity.carbookingservice.service.BookingCancellationService;
@@ -58,6 +59,9 @@ class BookingApiIT {
     BankTransferPaymentService bankTransferPaymentService;
 
     @Autowired
+    private BankTransferPaymentEventRepository bankTransferPaymentEventRepository;
+
+    @Autowired
     BookingCancellationService cancellationService;
 
     @Autowired
@@ -68,11 +72,13 @@ class BookingApiIT {
 
     @BeforeEach
     void setUp() {
+        bankTransferPaymentEventRepository.deleteAll();
         bookingRepository.deleteAll();
     }
 
     @AfterEach
     void tearDown() {
+        bankTransferPaymentEventRepository.deleteAll();
         bookingRepository.deleteAll();
     }
 
@@ -169,14 +175,19 @@ class BookingApiIT {
 
     @Test
     void overdueBankTransferIsAutomaticallyCancelled() throws Exception {
+        ZonedDateTime rentalStart = ZonedDateTime.now(java.time.ZoneOffset.UTC).plusHours(24);
+
+        ZonedDateTime rentalEnd = rentalStart.plusHours(24);
+
         String request = bookingJson(
                 "Dave",
                 "056-NL-JX",
                 "COMPACT",
                 "BANK_TRANSFER",
                 "TXN323456789",
-                "2020-01-02T10:00:00Z",
-                "2020-01-03T10:00:00Z");
+                rentalStart.toString(),
+                rentalEnd.toString());
+
         String body = mockMvc.perform(post("/v1/bookings")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
@@ -184,11 +195,14 @@ class BookingApiIT {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        UUID bookingId = java.util.UUID.fromString(
-                objectMapper.readTree(body).get("bookingId").asText());
+
+        UUID bookingId =
+                UUID.fromString(objectMapper.readTree(body).get("bookingId").asText());
 
         int cancelled = cancellationService.cancelDueBookings(java.time.Instant.now());
+
         assertThat(cancelled).isEqualTo(1);
+
         assertThat(bookingRepository.findById(bookingId).orElseThrow().getBookingStatus())
                 .isEqualTo(BookingStatus.CANCELLED);
     }
