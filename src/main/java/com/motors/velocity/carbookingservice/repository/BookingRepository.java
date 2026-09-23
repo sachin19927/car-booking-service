@@ -3,16 +3,17 @@ package com.motors.velocity.carbookingservice.repository;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.PaymentMode;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public interface BookingRepository extends JpaRepository<CarBooking, UUID> {
 
@@ -54,24 +55,30 @@ public interface BookingRepository extends JpaRepository<CarBooking, UUID> {
             b.paymentReceivedAt = :receivedAt,
             b.bookingStatus = CASE
                 WHEN COALESCE(b.paymentReceivedAmount, 0) + :paymentAmount >= b.totalAmount
-                    THEN com.motors.velocity.carbookingservice.model.BookingStatus.CONFIRMED
-                ELSE com.motors.velocity.carbookingservice.model.BookingStatus.PENDING_PAYMENT
+                    THEN :confirmedStatus
+                ELSE :pendingPaymentStatus
             END
         WHERE b.bookingId = :bookingId
-          AND b.bookingStatus = com.motors.velocity.carbookingservice.model.BookingStatus.PENDING_PAYMENT
+          AND b.bookingStatus = :pendingPaymentStatus
         """)
     int applyBankTransferPayment(
             @Param("bookingId") UUID bookingId,
             @Param("paymentAmount") BigDecimal paymentAmount,
+            @Param("confirmedStatus") BookingStatus confirmedStatus,
+            @Param("pendingPaymentStatus") BookingStatus pendingPaymentStatus,
             @Param("receivedAt") Instant receivedAt);
 
     @Modifying
     @Query("""
         UPDATE CarBooking b
-        SET b.bookingStatus = com.motors.velocity.carbookingservice.model.BookingStatus.CANCELLED
+        SET b.bookingStatus = :cancelledStatus
         WHERE b.bookingId = :bookingId
-          AND b.bookingStatus = com.motors.velocity.carbookingservice.model.BookingStatus.PENDING_PAYMENT
+          AND b.bookingStatus = :pendingStatus
           AND b.paymentDeadline <= :now
         """)
-    int cancelPendingBankTransfer(@Param("bookingId") UUID bookingId, @Param("now") Instant now);
+    int cancelPendingBankTransfer(
+            @Param("bookingId") UUID bookingId,
+            @Param("pendingStatus") BookingStatus pendingStatus,
+            @Param("cancelledStatus") BookingStatus cancelledStatus,
+            @Param("now") Instant now);
 }

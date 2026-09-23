@@ -1,15 +1,14 @@
 package com.motors.velocity.carbookingservice.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.motors.velocity.carbookingservice.config.KafkaProperties;
 import com.motors.velocity.carbookingservice.dto.BankTransferPaymentEvent;
 import com.motors.velocity.carbookingservice.exception.InvalidBankTransferPaymentEventException;
-import com.motors.velocity.carbookingservice.model.BookingConstants;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.service.BankTransferPaymentService;
 import com.motors.velocity.carbookingservice.service.CompositeBookingValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -24,13 +23,10 @@ public class BankTransferPaymentEventConsumer {
     private final CompositeBookingValidator compositeBookingValidator;
     private final BankTransferPaymentService paymentService;
     private final BookingMetrics bookingMetrics;
-
-    @Value("${app.kafka.bank-transfer-payment-events.topic:" + BookingConstants.BANK_TRANSFER_EVENTS_TOPIC + "}")
-    private String topic;
+    private final KafkaProperties kafkaProperties;
 
     @KafkaListener(
-            topics = "${app.kafka.bank-transfer-payment-events.topic:" + BookingConstants.BANK_TRANSFER_EVENTS_TOPIC
-                    + "}",
+            topics = "${app.kafka.bank-transfer-payment-events.topic:bank-transfer-payment-events}",
             groupId = "${app.kafka.consumer.group-id:car-booking-service}",
             containerFactory = "bankTransferKafkaListenerContainerFactory")
     public void consume(String payload) {
@@ -41,11 +37,19 @@ public class BankTransferPaymentEventConsumer {
             bookingMetrics.recordBankTransferEventProcessed();
         } catch (InvalidBankTransferPaymentEventException ex) {
             bookingMetrics.recordBankTransferEventFailed("invalid_event");
-            log.error("Invalid bank transfer payment event topic={} payload={}", topic, payload, ex);
+            log.error(
+                    "Invalid bank transfer payment event topic={} payload={}",
+                    kafkaProperties.bankTransferPaymentEvents().topic(),
+                    payload,
+                    ex);
             throw ex;
         } catch (RuntimeException ex) {
             bookingMetrics.recordBankTransferEventFailed("processing_failure");
-            log.error("Failed to process bank transfer payment event topic={} payload={}", topic, payload, ex);
+            log.error(
+                    "Failed to process bank transfer payment event topic={} payload={}",
+                    kafkaProperties.bankTransferPaymentEvents().topic(),
+                    payload,
+                    ex);
             throw ex;
         }
     }

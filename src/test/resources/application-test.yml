@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: car-booking-service-test
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:35432/velocity_motors_test
+    username: test_user
+    password: test_password
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: car-booking-service-test
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.type.mapping: "bankTransferPaymentEvents:com.motors.velocity.carbookingservice.dto.BankTransferPaymentEvents"
+
+app:
+  kafka:
+    bank-transfer-payment-events:
+      topic: bank-transfer-payment-events-test
+      dlt-topic: bank-transfer-payment-events-test.DLT
+  booking:
+    cancellation:
+      fixed-delay: 60000
+      batch-size: 500
+  pricing:
+    compact-per-day: 50.00
+    sedan-per-day: 70.00
+    suv-per-day: 90.00
+    luxury-per-day: 120.00
+
+credit-card-payment:
+  api:
+    base-url: http://localhost:9090
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true

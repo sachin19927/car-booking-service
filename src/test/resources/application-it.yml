@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: car-booking-service-it
+
+resilience4j:
+  retry:
+    instances:
+      creditCardPayment:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        enable-randomized-wait: false
+        retry-exceptions:
+          - com.motors.velocity.carbookingservice.exception.TransientPaymentServiceException
+          - org.springframework.web.client.ResourceAccessException
+
+app:
+  test-support:
+    enabled: true
+  kafka:
+    listener:
+      concurrency: 1
+    consumer:
+      group-id: car-booking-service-it
+      retry:
+        max-attempts: 3
+        initial-backoff: 200ms
+    bank-transfer-payment-events:
+      topic: bank-transfer-payment-events-test
+      dlt-topic: bank-transfer-payment-events-test.DLT
+      partitions: 1
+      replication-factor: 1
+
+management:
+  tracing:
+    sampling:
+      probability: 0

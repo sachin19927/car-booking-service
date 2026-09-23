@@ -9,11 +9,13 @@ import com.motors.velocity.carbookingservice.model.ErrorCode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
 import io.micrometer.core.instrument.Timer;
-import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -32,10 +34,7 @@ public class BookingCreationService {
         Timer.Sample timer = bookingMetrics.startBookingTimer();
         try {
             validateBusinessRules(request);
-            CarBooking carBooking = bookingMapper.toBooking(request);
-            carBooking.setTotalAmount(pricingService.calculateTotalAmount(carBooking));
-            carBooking.setIdempotencyKey(idempotencyKey);
-            carBooking.setRequestFingerprint(fingerprint);
+            CarBooking carBooking = prepareBooking(request, idempotencyKey, fingerprint);
             processPayment(carBooking);
             bookingRepository.saveAndFlush(carBooking);
             bookingMetrics.recordBookingCreated(carBooking.getPaymentMode(), carBooking.getBookingStatus());
@@ -60,6 +59,14 @@ public class BookingCreationService {
 
     private void validateBusinessRules(BookingRequest request) {
         compositeBookingValidator.validateBookingRequest(request);
+    }
+
+    private @NonNull CarBooking prepareBooking(BookingRequest request, String idempotencyKey, String fingerprint) {
+        CarBooking carBooking = bookingMapper.toBooking(request);
+        carBooking.setTotalAmount(pricingService.calculateTotalAmount(carBooking));
+        carBooking.setIdempotencyKey(idempotencyKey);
+        carBooking.setRequestFingerprint(fingerprint);
+        return carBooking;
     }
 
     private void processPayment(CarBooking booking) {

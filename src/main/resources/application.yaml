@@ -23,6 +23,9 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.JsonSerializer
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP_ID:car-booking-service}
       auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:earliest}
@@ -36,6 +39,8 @@ spring:
       missing-topics-fatal: false
 
 app:
+  test-support:
+    enabled: ${TEST_SUPPORT_ENABLED:false}
   kafka:
     listener:
       concurrency: ${KAFKA_LISTENER_CONCURRENCY:3}

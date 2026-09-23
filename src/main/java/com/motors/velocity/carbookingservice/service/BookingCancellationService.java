@@ -1,19 +1,20 @@
 package com.motors.velocity.carbookingservice.service;
 
+import com.motors.velocity.carbookingservice.config.BookingCancellationProperties;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
-import java.time.Instant;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -22,9 +23,7 @@ public class BookingCancellationService {
 
     private final BookingRepository bookingRepository;
     private final BookingMetrics bookingMetrics;
-
-    @Value("${app.booking.cancellation.batch-size:500}")
-    private int batchSize;
+    private final BookingCancellationProperties bookingCancellationProperties;
 
     @Scheduled(fixedDelayString = "${app.booking.cancellation.fixed-delay:60000}")
     @Transactional
@@ -35,7 +34,7 @@ public class BookingCancellationService {
     @Transactional
     public int cancelDueBookings(Instant now) {
         int cancelled = 0;
-        int safeBatchSize = Math.max(1, batchSize);
+        int safeBatchSize = Math.max(1, bookingCancellationProperties.batchSize());
 
         while (true) {
             List<CarBooking> dueBookings = bookingRepository.findPendingBankTransferBookingsDueForCancellation(
@@ -45,7 +44,8 @@ public class BookingCancellationService {
             }
 
             for (CarBooking booking : dueBookings) {
-                int updated = bookingRepository.cancelPendingBankTransfer(booking.getBookingId(), now);
+                int updated = bookingRepository.cancelPendingBankTransfer(
+                        booking.getBookingId(), BookingStatus.PENDING_PAYMENT, BookingStatus.CANCELLED, now);
                 if (updated == 1) {
                     cancelled++;
                     bookingMetrics.recordBookingCancellation();

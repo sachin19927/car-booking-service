@@ -3,9 +3,10 @@ package com.motors.velocity.carbookingservice.service;
 import com.motors.velocity.carbookingservice.exception.BusinessValidationException;
 import com.motors.velocity.carbookingservice.model.BookingConstants;
 import com.motors.velocity.carbookingservice.model.ErrorCode;
+import org.springframework.stereotype.Component;
+
 import java.time.Duration;
 import java.time.Instant;
-import org.springframework.stereotype.Component;
 
 @Component
 public class BookingValidator {

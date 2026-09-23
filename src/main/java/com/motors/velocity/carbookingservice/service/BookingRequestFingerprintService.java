@@ -1,10 +1,11 @@
 package com.motors.velocity.carbookingservice.service;
 
 import com.motors.velocity.carbookingservice.dto.BookingRequest;
+import org.springframework.stereotype.Service;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import org.springframework.stereotype.Service;
 
 @Service
 public class BookingRequestFingerprintService {

@@ -4,15 +4,16 @@ import com.motors.velocity.carbookingservice.dto.MockVehicle;
 import com.motors.velocity.carbookingservice.exception.BusinessValidationException;
 import com.motors.velocity.carbookingservice.model.ErrorCode;
 import jakarta.annotation.PostConstruct;
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

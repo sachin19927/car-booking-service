@@ -9,15 +9,16 @@ import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BankTransferPaymentEventRepository;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -54,25 +55,31 @@ public class BankTransferPaymentService {
     }
 
     private CarBooking findBooking(TransactionDetails details, BankTransferPaymentEvent event) {
-        if (details.bookingIdentifier() != null) {
-            try {
-                UUID bookingId = UUID.fromString(details.bookingIdentifier());
-                Optional<CarBooking> booking = bookingRepository.findById(bookingId);
-                if (booking.isPresent()) {
-                    return booking.get();
-                }
-            } catch (IllegalArgumentException ignored) {
-                // Assignment examples use a 10-character booking identifier; fall back to payment reference.
-            }
+        Optional<CarBooking> bookingById = findBookingByIdentifer(details.bookingIdentifier());
+        if (bookingById.isPresent()) {
+            return bookingById.get();
         }
 
+        return findBookingByReference(details.transactionReference(), event.paymentId())
+                .orElseThrow(() -> new InvalidBankTransferPaymentEventException(
+                        "No pending booking found for transaction reference " + details.transactionReference()));
+    }
+
+    private Optional<CarBooking> findBookingByIdentifer(String bookingIdentifier) {
+        if (bookingIdentifier == null) {
+            return Optional.empty();
+        }
+        try {
+            return bookingRepository.findById(UUID.fromString(bookingIdentifier));
+        } catch (IllegalArgumentException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<CarBooking> findBookingByReference(String transactionReference, String paymentId) {
         return bookingRepository
-                .findByPaymentModeAndPaymentReference(PaymentMode.BANK_TRANSFER, details.transactionReference())
-                .orElseGet(() -> bookingRepository
-                        .findByPaymentModeAndPaymentReference(PaymentMode.BANK_TRANSFER, event.paymentId())
-                        .orElseThrow(() -> new InvalidBankTransferPaymentEventException(
-                                "No pending booking found for transaction reference "
-                                        + details.transactionReference())));
+                .findByPaymentModeAndPaymentReference(PaymentMode.BANK_TRANSFER, transactionReference)
+                .or(() -> bookingRepository.findByPaymentModeAndPaymentReference(PaymentMode.BANK_TRANSFER, paymentId));
     }
 
     private TransactionDetails parseTransactionDetails(String value) {
@@ -126,7 +133,12 @@ public class BankTransferPaymentService {
     }
 
     private boolean applyPayment(BankTransferPaymentEvent event, CarBooking booking, Instant receivedAt) {
-        return bookingRepository.applyBankTransferPayment(booking.getBookingId(), event.paymentAmount(), receivedAt)
+        return bookingRepository.applyBankTransferPayment(
+                        booking.getBookingId(),
+                        event.paymentAmount(),
+                        BookingStatus.PENDING_PAYMENT,
+                        BookingStatus.CONFIRMED,
+                        receivedAt)
                 == 1;
     }
 

@@ -12,6 +12,7 @@ import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BankTransferPaymentEventRepository;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,8 @@ class BankTransferPaymentServiceTest {
                 .thenReturn(Optional.of(booking));
         when(eventRepository.insertIfAbsent(any(), eq("PAY-1"), eq(id), eq(new BigDecimal("40.00")), any()))
                 .thenReturn(1);
-        when(bookingRepository.applyBankTransferPayment(eq(id), eq(new BigDecimal("40.00")), any()))
+        when(bookingRepository.applyBankTransferPayment(
+                        eq(id), eq(new BigDecimal("40.00")), any(BookingStatus.class), any(BookingStatus.class), any()))
                 .thenReturn(1);
         when(bookingRepository.findById(id)).thenReturn(Optional.of(updated));
 
@@ -82,14 +84,24 @@ class BankTransferPaymentServiceTest {
         when(eventRepository.insertIfAbsent(any(), eq("PAY-1"), eq(id), eq(new BigDecimal("60.00")), any()))
                 .thenReturn(1);
 
-        when(bookingRepository.applyBankTransferPayment(eq(id), eq(new BigDecimal("60.00")), any()))
+        when(bookingRepository.applyBankTransferPayment(
+                        eq(id),
+                        eq(new BigDecimal("60.00")),
+                        any(BookingStatus.class),
+                        any(BookingStatus.class),
+                        any(Instant.class)))
                 .thenReturn(1);
 
         // Second payment: €40
         when(eventRepository.insertIfAbsent(any(), eq("PAY-2"), eq(id), eq(new BigDecimal("40.00")), any()))
                 .thenReturn(1);
 
-        when(bookingRepository.applyBankTransferPayment(eq(id), eq(new BigDecimal("40.00")), any()))
+        when(bookingRepository.applyBankTransferPayment(
+                        eq(id),
+                        eq(new BigDecimal("40.00")),
+                        any(BookingStatus.class),
+                        any(BookingStatus.class),
+                        any(Instant.class)))
                 .thenReturn(1);
 
         // -----------------------------------
@@ -126,7 +138,13 @@ class BankTransferPaymentServiceTest {
                 new BankTransferPaymentEvent("PAY-3", "NL00BANK", new BigDecimal("100.00"), "TXN123456789 " + id));
 
         verify(metrics).recordBankTransferEventIgnored("duplicate_payment_event");
-        verify(bookingRepository, never()).applyBankTransferPayment(any(), any(), any());
+        verify(bookingRepository, never())
+                .applyBankTransferPayment(
+                        any(UUID.class),
+                        any(BigDecimal.class),
+                        any(BookingStatus.class),
+                        any(BookingStatus.class),
+                        any(Instant.class));
     }
 
     private CarBooking booking(UUID id, String total, BookingStatus status, String paymentReference) {

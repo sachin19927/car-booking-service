@@ -2,35 +2,37 @@ package com.motors.velocity.carbookingservice.config;
 
 import com.motors.velocity.carbookingservice.client.payment.ApiClient;
 import com.motors.velocity.carbookingservice.client.payment.api.DefaultApi;
-import java.net.http.HttpClient;
-import java.time.Duration;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
+
 @Configuration
+@RequiredArgsConstructor
 public class CreditCardPaymentClientConfig {
 
+    private final CreditCardPaymentProperties creditCardPaymentProperties;
+
     @Bean
-    public ApiClient creditCardPaymentApiClient(
-            @Value("${credit-card-payment.base-url}") String baseUrl,
-            @Value("${credit-card-payment.timeout.connect}") Duration connectTimeout,
-            @Value("${credit-card-payment.timeout.read}") Duration readTimeout) {
+    public ApiClient creditCardPaymentApiClient() {
+
+        CreditCardPaymentProperties.Timeout timeout = creditCardPaymentProperties.timeout();
 
         HttpClient httpClient =
-                HttpClient.newBuilder().connectTimeout(connectTimeout).build();
+                HttpClient.newBuilder().connectTimeout(timeout.connect()).build();
 
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
 
-        requestFactory.setReadTimeout(readTimeout);
+        requestFactory.setReadTimeout(timeout.read());
 
         RestClient restClient =
                 RestClient.builder().requestFactory(requestFactory).build();
 
         ApiClient apiClient = new ApiClient(restClient);
-        apiClient.setBasePath(baseUrl);
+        apiClient.setBasePath(creditCardPaymentProperties.baseUrl());
 
         return apiClient;
     }
