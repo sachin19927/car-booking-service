@@ -1,0 +1,2462 @@
+{
+  "info": {
+    "_postman_id": "velocity-car-booking-comprehensive-suite",
+    "name": "Velocity Car Booking Service - Comprehensive Test Suite",
+    "description": "Comprehensive functional, business-rule, payment, Kafka/DLT, idempotency, cancellation and observability suite derived from the current application, existing Postman collection, and integration tests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "managementUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "wireMockAdminUrl",
+      "value": "http://localhost:9090/__admin"
+    },
+    {
+      "key": "bookingId",
+      "value": ""
+    },
+    {
+      "key": "bankBookingId",
+      "value": ""
+    },
+    {
+      "key": "cancelBookingId",
+      "value": ""
+    },
+    {
+      "key": "overlapBookingId",
+      "value": ""
+    },
+    {
+      "key": "idempotencyKey",
+      "value": ""
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "cancelStart",
+      "value": ""
+    },
+    {
+      "key": "cancelEnd",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runId')) {",
+          "  pm.collectionVariables.set('runId', Date.now().toString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Positive Booking Flows",
+      "item": [
+        {
+          "name": "Cash - CONFIRMED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Cash\",\n  \"vehicleId\": \"VH-NL-347\",\n  \"startDate\": \"2035-01-01T10:00:00Z\",\n  \"endDate\": \"2035-01-02T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');",
+                  "pm.expect(pm.response.json().bookingId).to.match(/^[0-9a-f-]{36}$/i);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Digital Wallet - CONFIRMED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Wallet\",\n  \"vehicleId\": \"VH-NL-821\",\n  \"startDate\": \"2035-02-01T10:00:00Z\",\n  \"endDate\": \"2035-02-02T10:00:00Z\",\n  \"vehicleCategory\": \"SEDAN\",\n  \"paymentMethod\": \"DIGITAL_WALLET\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Credit Approved\",\n  \"vehicleId\": \"VH-NL-594\",\n  \"startDate\": \"2035-03-01T10:00:00Z\",\n  \"endDate\": \"2035-03-02T10:00:00Z\",\n  \"vehicleCategory\": \"SUV\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-APPROVED-{{$randomUUID}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Credit Card / WireMock",
+      "item": [
+        {
+          "name": "WireMock reset - APPROVED",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{wireMockAdminUrl}}/mappings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"request\":{\"method\":\"POST\",\"urlPath\":\"/credit-card-payment-api/payment-status\",\"bodyPatterns\":[{\"matchesJsonPath\":{\"expression\":\"$.paymentReference\",\"equalTo\":\"CC-APPROVED\"}}]},\"response\":{\"status\":200,\"headers\":{\"Content-Type\":\"application/json\"},\"jsonBody\":{\"status\":\"APPROVED\",\"lastUpdateDate\":\"2035-03-01T09:00:00Z\"}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Credit Approved\",\n  \"vehicleId\": \"VH-NL-431-HM\",\n  \"startDate\": \"2035-03-03T10:00:00Z\",\n  \"endDate\": \"2035-03-04T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-APPROVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock reset - REJECTED",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{wireMockAdminUrl}}/mappings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - REJECTED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"request\":{\"method\":\"POST\",\"urlPath\":\"/credit-card-payment-api/payment-status\",\"bodyPatterns\":[{\"matchesJsonPath\":{\"expression\":\"$.paymentReference\",\"equalTo\":\"CC-REJECTED\"}}]},\"response\":{\"status\":200,\"headers\":{\"Content-Type\":\"application/json\"},\"jsonBody\":{\"status\":\"REJECTED\",\"lastUpdateDate\":\"2035-03-01T09:00:00Z\"}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - REJECTED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Credit REJECTED\",\n  \"vehicleId\": \"056-NL-JX\",\n  \"startDate\": \"2035-04-06T10:00:00Z\",\n  \"endDate\": \"2035-04-07T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-REJECTED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('PAYMENT_NOT_APPROVED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock reset - 400 INVALID REFERENCE",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{wireMockAdminUrl}}/mappings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - 400 INVALID REFERENCE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"request\":{\"method\":\"POST\",\"urlPath\":\"/credit-card-payment-api/payment-status\",\"bodyPatterns\":[{\"matchesJsonPath\":{\"expression\":\"$.paymentReference\",\"equalTo\":\"CC-400\"}}]},\"response\":{\"status\":400,\"headers\":{\"Content-Type\":\"application/json\"},\"jsonBody\":{\"error\":\"simulated\"}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - 400 INVALID REFERENCE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Credit 400 INVALID REFERENCE\",\n  \"vehicleId\": \"721-NL-KR\",\n  \"startDate\": \"2035-04-09T10:00:00Z\",\n  \"endDate\": \"2035-04-10T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-400\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 500', () => pm.response.to.have.status(500));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('PAYMENT_REFERENCE_INVALID');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock reset - 404 NOT FOUND",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{wireMockAdminUrl}}/mappings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - 404 NOT FOUND",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"request\":{\"method\":\"POST\",\"urlPath\":\"/credit-card-payment-api/payment-status\",\"bodyPatterns\":[{\"matchesJsonPath\":{\"expression\":\"$.paymentReference\",\"equalTo\":\"CC-404\"}}]},\"response\":{\"status\":404,\"headers\":{\"Content-Type\":\"application/json\"},\"jsonBody\":{\"error\":\"simulated\"}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - 404 NOT FOUND",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Credit 404 NOT FOUND\",\n  \"vehicleId\": \"721-NL-KR\",\n  \"startDate\": \"2035-04-12T10:00:00Z\",\n  \"endDate\": \"2035-04-13T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-404\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('PAYMENT_NOT_FOUND');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock reset - 500 PERSISTENT FAILURE",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{wireMockAdminUrl}}/mappings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - 500 PERSISTENT FAILURE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"request\":{\"method\":\"POST\",\"urlPath\":\"/credit-card-payment-api/payment-status\",\"bodyPatterns\":[{\"matchesJsonPath\":{\"expression\":\"$.paymentReference\",\"equalTo\":\"CC-500\"}}]},\"response\":{\"status\":500,\"headers\":{\"Content-Type\":\"application/json\"},\"jsonBody\":{\"error\":\"simulated\"}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - 500 PERSISTENT FAILURE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Credit 500 PERSISTENT FAILURE\",\n  \"vehicleId\": \"721-NL-KR\",\n  \"startDate\": \"2035-04-15T10:00:00Z\",\n  \"endDate\": \"2035-04-16T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-500\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 500', () => pm.response.to.have.status(500));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('INTERNAL_SERVER_ERROR');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock reset - TRANSIENT THEN APPROVED",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{wireMockAdminUrl}}/mappings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - TRANSIENT THEN APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"request\":{\"method\":\"POST\",\"urlPath\":\"/credit-card-payment-api/payment-status\",\"bodyPatterns\":[{\"matchesJsonPath\":{\"expression\":\"$.paymentReference\",\"equalTo\":\"CC-RETRY\"}}]},\"response\":{\"status\":500,\"headers\":{\"Content-Type\":\"application/json\"},\"jsonBody\":{\"error\":\"temporary\"}},\"scenarioName\":\"cc-retry\",\"newScenarioState\":\"APPROVED\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - retry success mapping",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request\": {\n    \"method\": \"POST\",\n    \"urlPath\": \"/credit-card-payment-api/payment-status\",\n    \"bodyPatterns\": [\n      {\n        \"matchesJsonPath\": {\n          \"expression\": \"$.paymentReference\",\n          \"equalTo\": \"CC-RETRY\"\n        }\n      }\n    ]\n  },\n  \"response\": {\n    \"status\": 200,\n    \"headers\": {\n      \"Content-Type\": \"application/json\"\n    },\n    \"jsonBody\": {\n      \"status\": \"APPROVED\",\n      \"lastUpdateDate\": \"2035-05-01T09:00:00Z\"\n    }\n  },\n  \"scenarioName\": \"cc-retry\",\n  \"requiredScenarioState\": \"APPROVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - transient 500 then APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Credit Retry\",\n  \"vehicleId\": \"438-NL-PT\",\n  \"startDate\": \"2035-05-10T10:00:00Z\",\n  \"endDate\": \"2035-05-11T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-RETRY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock reset - INVALID RESPONSE",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{wireMockAdminUrl}}/mappings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - INVALID RESPONSE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"request\":{\"method\":\"POST\",\"urlPath\":\"/credit-card-payment-api/payment-status\",\"bodyPatterns\":[{\"matchesJsonPath\":{\"expression\":\"$.paymentReference\",\"equalTo\":\"CC-INVALID-RESPONSE\"}}]},\"response\":{\"status\":200,\"headers\":{\"Content-Type\":\"application/json\"},\"jsonBody\":{\"lastUpdateDate\":\"2035-06-01T09:00:00Z\"}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - invalid response payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Credit Invalid Response\",\n  \"vehicleId\": \"NL-431-HM\",\n  \"startDate\": \"2035-06-01T10:00:00Z\",\n  \"endDate\": \"2035-06-02T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-INVALID-RESPONSE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('INVALID_PAYMENT_SERVICE_RESPONSE');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock reset - TIMEOUT",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{wireMockAdminUrl}}/mappings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WireMock stub - TIMEOUT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{wireMockAdminUrl}}/mappings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"request\":{\"method\":\"POST\",\"urlPath\":\"/credit-card-payment-api/payment-status\",\"bodyPatterns\":[{\"matchesJsonPath\":{\"expression\":\"$.paymentReference\",\"equalTo\":\"CC-TIMEOUT\"}}]},\"response\":{\"status\":200,\"headers\":{\"Content-Type\":\"application/json\"},\"jsonBody\":{\"status\":\"APPROVED\",\"lastUpdateDate\":\"2035-07-01T09:00:00Z\"},\"fixedDelayMilliseconds\":5000}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit Card - timeout/retry exhaustion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Credit Timeout\",\n  \"vehicleId\": \"NL-431-HM\",\n  \"startDate\": \"2035-07-01T10:00:00Z\",\n  \"endDate\": \"2035-07-02T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\",\n  \"paymentReference\": \"CC-TIMEOUT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 500', () => pm.response.to.have.status(500));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Bank Transfer / Kafka / DLT",
+      "item": [
+        {
+          "name": "Bank Transfer - PENDING_PAYMENT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Bank Pending\",\n  \"vehicleId\": \"NL-678-AM\",\n  \"startDate\": \"2035-08-01T10:00:00Z\",\n  \"endDate\": \"2035-08-03T10:00:00Z\",\n  \"vehicleCategory\": \"SEDAN\",\n  \"paymentMethod\": \"BANK_TRANSFER\",\n  \"paymentReference\": \"TXN123456789\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('PENDING_PAYMENT');",
+                  "pm.collectionVariables.set('bankBookingId',pm.response.json().bookingId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Partial Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/payment-events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAY-PARTIAL-{{$randomUUID}}\",\n  \"senderAccountNumber\": \"NL00BANK123\",\n  \"paymentAmount\": 50.0,\n  \"transactionDetails\": \"TXN123456789 {{bankBookingId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Verify Partial Payment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/bookings/{{bankBookingId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().status).to.eql('PENDING_PAYMENT');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Remaining Full Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/payment-events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAY-FULL-{{$randomUUID}}\",\n  \"senderAccountNumber\": \"NL00BANK123\",\n  \"paymentAmount\": 50.0,\n  \"transactionDetails\": \"TXN123456789 {{bankBookingId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Verify CONFIRMED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/bookings/{{bankBookingId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Duplicate Test Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Bank Duplicate Test\",\n  \"vehicleId\": \"NL-431-HM\",\n  \"startDate\": \"2036-01-01T10:00:00Z\",\n  \"endDate\": \"2036-01-02T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"BANK_TRANSFER\",\n  \"paymentReference\": \"TXN-DUP-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('PENDING_PAYMENT');",
+                  "pm.collectionVariables.set('duplicateBookingId',pm.response.json().bookingId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Duplicate Event #1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/payment-events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAY-DUP-001\",\n  \"senderAccountNumber\": \"NL00BANK123\",\n  \"paymentAmount\": 10.0,\n  \"transactionDetails\": \"TXN-DUP-001 {{duplicateBookingId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Duplicate Event #2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/payment-events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAY-DUP-001\",\n  \"senderAccountNumber\": \"NL00BANK123\",\n  \"paymentAmount\": 10.0,\n  \"transactionDetails\": \"TXN-DUP-001 {{duplicateBookingId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Verify Duplicate Did Not Double Credit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/bookings/{{duplicateBookingId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().status).to.eql('PENDING_PAYMENT');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Malformed JSON -> DLT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/raw-events/{{malformedKey}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{ not-valid-json {{malformedMarker}}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('malformedMarker','postman-malformed-' + pm.variables.replaceIn('{{$randomUUID}}')); pm.collectionVariables.set('malformedKey','malformed-' + pm.collectionVariables.get('runId'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Verify Malformed Event in DLT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/dlt-events?containing={{malformedMarker}}&timeoutSeconds=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().found).to.eql(true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Unknown Booking -> DLT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/payment-events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"{{unknownPaymentId}}\",\n  \"senderAccountNumber\": \"NL00BANK123\",\n  \"paymentAmount\": 10.0,\n  \"transactionDetails\": \"TXN-UNKNOWN-{{runId}} 00000000-0000-0000-0000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('unknownPaymentId','PAY-UNKNOWN-' + pm.variables.replaceIn('{{$randomUUID}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Verify Unknown Booking in DLT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/dlt-events?containing={{unknownPaymentId}}&timeoutSeconds=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().found).to.eql(true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bank Transfer - Invalid Event Fields -> DLT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/test-support/v1/bank-transfer/payment-events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAY-INVALID-{{$randomUUID}}\",\n  \"senderAccountNumber\": \"NL00BANK123\",\n  \"paymentAmount\": -10.0,\n  \"transactionDetails\": \"TXN-INVALID-{{runId}} 00000000-0000-0000-0000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Idempotency",
+      "item": [
+        {
+          "name": "Idempotency - Create with Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Idempotency\",\n  \"vehicleId\": \"NL-678-AM\",\n  \"startDate\": \"2035-09-01T10:00:00Z\",\n  \"endDate\": \"2035-09-02T10:00:00Z\",\n  \"vehicleCategory\": \"LUXURY\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('idempotencyKey','postman-idempotency-' + pm.variables.replaceIn('{{$randomUUID}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('bookingId',pm.response.json().bookingId);",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency - Same Key Same Request Replays",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Idempotency\",\n  \"vehicleId\": \"NL-678-AM\",\n  \"startDate\": \"2035-09-01T10:00:00Z\",\n  \"endDate\": \"2035-09-02T10:00:00Z\",\n  \"vehicleCategory\": \"LUXURY\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().bookingId).to.eql(pm.collectionVariables.get('bookingId'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency - Same Key Different Request Rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"DIFFERENT REQUEST\",\n  \"vehicleId\": \"NL-678-AM\",\n  \"startDate\": \"2035-09-01T10:00:00Z\",\n  \"endDate\": \"2035-09-02T10:00:00Z\",\n  \"vehicleCategory\": \"LUXURY\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('IDEMPOTENCY_KEY_REUSED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency - Key Longer Than 100 Characters",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{longIdempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Idempotency\",\n  \"vehicleId\": \"NL-678-AM\",\n  \"startDate\": \"2035-09-01T10:00:00Z\",\n  \"endDate\": \"2035-09-02T10:00:00Z\",\n  \"vehicleCategory\": \"LUXURY\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('longIdempotencyKey','x'.repeat(101));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('INVALID_IDEMPOTENCY_KEY');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Request & Business Validation",
+      "item": [
+        {
+          "name": "Validation - Invalid Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Invalid Vehicle\",\n  \"vehicleId\": \"VH-NL-999\",\n  \"startDate\": \"2035-10-01T10:00:00Z\",\n  \"endDate\": \"2035-10-02T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VEHICLE_NOT_FOUND');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Invalid Vehicle Format",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Bad Vehicle Format\",\n  \"vehicleId\": \"INVALID\",\n  \"startDate\": \"2035-10-03T10:00:00Z\",\n  \"endDate\": \"2035-10-04T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VALIDATION_FAILED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Missing Customer Name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"VH-NL-347\",\n  \"startDate\": \"2035-10-05T10:00:00Z\",\n  \"endDate\": \"2035-10-06T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VALIDATION_FAILED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Customer Name > 50",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\",\n  \"vehicleId\": \"VH-NL-347\",\n  \"startDate\": \"2035-10-07T10:00:00Z\",\n  \"endDate\": \"2035-10-08T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VALIDATION_FAILED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Missing Start Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Missing Start\",\n  \"vehicleId\": \"VH-NL-821\",\n  \"endDate\": \"2035-10-10T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VALIDATION_FAILED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Missing End Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Missing End\",\n  \"vehicleId\": \"VH-NL-821\",\n  \"startDate\": \"2035-10-11T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VALIDATION_FAILED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Missing Vehicle Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Missing Category\",\n  \"vehicleId\": \"VH-NL-821\",\n  \"startDate\": \"2035-10-12T10:00:00Z\",\n  \"endDate\": \"2035-10-13T10:00:00Z\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VALIDATION_FAILED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Missing Payment Method",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Missing Payment\",\n  \"vehicleId\": \"VH-NL-821\",\n  \"startDate\": \"2035-10-14T10:00:00Z\",\n  \"endDate\": \"2035-10-15T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VALIDATION_FAILED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Credit Card Payment Reference Required",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Missing CC Reference\",\n  \"vehicleId\": \"VH-NL-594\",\n  \"startDate\": \"2035-10-16T10:00:00Z\",\n  \"endDate\": \"2035-10-17T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CREDIT_CARD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('PAYMENT_REFERENCE_REQUIRED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Bank Transfer Payment Reference Required",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Missing Bank Reference\",\n  \"vehicleId\": \"NL-905-ZT\",\n  \"startDate\": \"2035-10-18T10:00:00Z\",\n  \"endDate\": \"2035-10-19T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"BANK_TRANSFER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('PAYMENT_REFERENCE_REQUIRED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Payment Reference > 100",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Long Reference\",\n  \"vehicleId\": \"NL-905-ZT\",\n  \"startDate\": \"2035-10-20T10:00:00Z\",\n  \"endDate\": \"2035-10-21T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"BANK_TRANSFER\",\n  \"paymentReference\": \"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VALIDATION_FAILED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Start Date In The Past",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Past Start\",\n  \"vehicleId\": \"NL-431-HM\",\n  \"startDate\": \"2020-01-01T10:00:00Z\",\n  \"endDate\": \"2035-10-22T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('INVALID_RENTAL_PERIOD');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - End Before Start",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Bad Dates\",\n  \"vehicleId\": \"VH-NL-821\",\n  \"startDate\": \"2035-10-24T10:00:00Z\",\n  \"endDate\": \"2035-10-23T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('INVALID_RENTAL_PERIOD');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Start Equals End",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Equal Dates\",\n  \"vehicleId\": \"VH-NL-821\",\n  \"startDate\": \"2035-10-25T10:00:00Z\",\n  \"endDate\": \"2035-10-25T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('INVALID_RENTAL_PERIOD');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - More Than 21 Days",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Too Long\",\n  \"vehicleId\": \"VH-NL-347\",\n  \"startDate\": \"2035-10-26T10:00:00Z\",\n  \"endDate\": \"2035-11-16T10:00:01Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('MAX_RENTAL_DAYS_EXCEEDED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Malformed JSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{ invalid json",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('MALFORMED_REQUEST');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation - Exactly 21 Days Accepted",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Exactly 21 Days\",\n  \"vehicleId\": \"NL-431-HM\",\n  \"startDate\": \"2035-11-20T10:00:00Z\",\n  \"endDate\": \"2035-12-11T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Vehicle Availability",
+      "item": [
+        {
+          "name": "Vehicle Overlap - First Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Overlap One\",\n  \"vehicleId\": \"NL-214-RK\",\n  \"startDate\": \"2035-12-01T10:00:00Z\",\n  \"endDate\": \"2035-12-05T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('overlapBookingId',pm.response.json().bookingId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehicle Overlap - Second Booking Rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Overlap Two\",\n  \"vehicleId\": \"NL-214-RK\",\n  \"startDate\": \"2035-12-03T10:00:00Z\",\n  \"endDate\": \"2035-12-06T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('VEHICLE_UNAVAILABLE');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehicle Availability - Adjacent Booking Allowed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Adjacent Booking\",\n  \"vehicleId\": \"NL-214-RK\",\n  \"startDate\": \"2035-12-05T10:00:00Z\",\n  \"endDate\": \"2035-12-06T10:00:00Z\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Automatic 48-Hour Cancellation",
+      "item": [
+        {
+          "name": "Cancellation - Create Overdue Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Cancellation\",\n  \"vehicleId\": \"NL-905-ZT\",\n  \"startDate\": \"{{cancelStart}}\",\n  \"endDate\": \"{{cancelEnd}}\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"BANK_TRANSFER\",\n  \"paymentReference\": \"TXNCANCEL-{{$randomUUID}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "",
+                  "const start = new Date(Date.now() + 24*60*60*1000);",
+                  "const end = new Date(start.getTime() + 24*60*60*1000);",
+                  "pm.collectionVariables.set('cancelStart', start.toISOString());",
+                  "pm.collectionVariables.set('cancelEnd', end.toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('PENDING_PAYMENT');",
+                  "pm.collectionVariables.set('cancelBookingId',pm.response.json().bookingId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancellation - Run Batch",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/test-support/v1/cancellations/run"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().cancelledCount).to.be.at.least(1);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancellation - Verify CANCELLED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/bookings/{{cancelBookingId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().status).to.eql('CANCELLED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancellation - Cancelled Booking No Longer Blocks Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"After Cancellation\",\n  \"vehicleId\": \"NL-905-ZT\",\n  \"startDate\": \"{{cancelStart}}\",\n  \"endDate\": \"{{cancelEnd}}\",\n  \"vehicleCategory\": \"COMPACT\",\n  \"paymentMethod\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().status).to.eql('CONFIRMED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 - Retrieval & Observability",
+      "item": [
+        {
+          "name": "Booking Retrieval - Existing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/bookings/{{bookingId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().bookingId).to.eql(pm.collectionVariables.get('bookingId'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Booking Retrieval - Not Found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/bookings/00000000-0000-0000-0000-000000000000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.expect(pm.response.json().errorCode).to.eql('BOOKING_NOT_FOUND');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actuator Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{managementUrl}}/actuator/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().status).to.eql('UP');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prometheus Metrics - Booking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{managementUrl}}/actuator/prometheus"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.text()).to.include('booking_creation_duration');",
+                  "pm.expect(pm.response.text()).to.include('booking_created_total');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prometheus Metrics - Credit Card",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{managementUrl}}/actuator/prometheus"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.text()).to.include('credit_card_payment_duration');",
+                  "pm.expect(pm.response.text()).to.include('credit_card_payment_total');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prometheus Metrics - Retry",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{managementUrl}}/actuator/prometheus"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.text()).to.include('credit_card_payment_retry_total');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prometheus Metrics - Bank Transfer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{managementUrl}}/actuator/prometheus"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.text()).to.include('bank_transfer_payment_event_total');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
