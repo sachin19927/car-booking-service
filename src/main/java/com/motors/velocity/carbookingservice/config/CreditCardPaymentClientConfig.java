@@ -2,13 +2,12 @@ package com.motors.velocity.carbookingservice.config;
 
 import com.motors.velocity.carbookingservice.client.payment.ApiClient;
 import com.motors.velocity.carbookingservice.client.payment.api.DefaultApi;
+import java.net.http.HttpClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-
-import java.net.http.HttpClient;
 
 @Configuration
 @RequiredArgsConstructor

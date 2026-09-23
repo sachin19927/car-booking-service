@@ -3,12 +3,11 @@ package com.motors.velocity.carbookingservice.service;
 import com.motors.velocity.carbookingservice.config.PricingProperties;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
 import com.motors.velocity.carbookingservice.model.VehicleCategory;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor

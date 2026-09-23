@@ -3,17 +3,16 @@ package com.motors.velocity.carbookingservice.repository;
 import com.motors.velocity.carbookingservice.entity.CarBooking;
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.PaymentMode;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface BookingRepository extends JpaRepository<CarBooking, UUID> {
 

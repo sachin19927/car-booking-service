@@ -18,14 +18,14 @@ import org.testcontainers.utility.DockerImageName;
 @DisabledIfSystemProperty(named = "skipTests", matches = "true")
 public abstract class AbstractContainerIT {
 
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(DockerImageName.parse("postgres:18-alpine"))
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
             .withDatabaseName("velocity_motors_test")
             .withUsername("test_user")
             .withPassword("test_password")
             .withReuse(false)
             .withStartupTimeout(Duration.ofMinutes(2));
 
-    static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.3"))
+    static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("apache/kafka:3.9.1"))
             .withReuse(false)
             .withStartupTimeout(Duration.ofMinutes(2));
 
@@ -51,7 +51,7 @@ public abstract class AbstractContainerIT {
 
         registry.add(
                 "credit-card-payment.base-url",
-                () -> WireMockExtensionHelper.getWireMockBaseUrl() + "/credit-card-payment");
+                () -> WireMockExtensionHelper.getWireMockBaseUrl() + "/credit-card-payment-api");
     }
 
     protected void waitForKafkaReady() throws InterruptedException {

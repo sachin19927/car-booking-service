@@ -7,11 +7,10 @@ import com.motors.velocity.carbookingservice.exception.InvalidBankTransferPaymen
 import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.ErrorCode;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.time.Instant;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor

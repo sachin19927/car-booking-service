@@ -44,7 +44,7 @@ public class BankTransferPaymentEventConsumerIT extends AbstractContainerIT {
     @Value("${app.kafka.bank-transfer-payment-events.topic}")
     String topic;
 
-    @Value("${app.kafka.bank-transfer-payment-events.dlt.topic}")
+    @Value("${app.kafka.bank-transfer-payment-events.dlt-topic}")
     String dltTopic;
 
     KafkaTestHelper kafkaTestHelper;
@@ -64,7 +64,7 @@ public class BankTransferPaymentEventConsumerIT extends AbstractContainerIT {
 
     @Test
     void validPaymentEventConfirmsBookingAsynchronously() throws Exception {
-        UUID bookingId = createBankTransferBooking("Alice", "VH-NL-347", "TXN400000001", "2033-01-01", "2023-01-02");
+        UUID bookingId = createBankTransferBooking("Alice", "VH-NL-347", "TXN400000001", "2033-01-01", "2033-01-02");
 
         publishEvent("PAY-400000001", "TXN400000001 " + bookingId, new BigDecimal("50.00"));
         await().atMost(15, TimeUnit.SECONDS)
@@ -78,28 +78,28 @@ public class BankTransferPaymentEventConsumerIT extends AbstractContainerIT {
 
     @Test
     void partialPaymentEventKeepBookingPendingAsynchronously() throws Exception {
-        UUID bookingId = createBankTransferBooking("Bob", "VH-NL-281", "TXN400000002", "2033-02-01", "2023-02-03");
+        UUID bookingId = createBankTransferBooking("Bob", "VH-NL-347", "TXN400000002", "2033-02-01", "2033-02-03");
 
         publishEvent("PAY-400000002", "TXN400000002 " + bookingId, new BigDecimal("30.00"));
         await().atMost(15, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     CarBooking booking = bookingRepository.findById(bookingId).orElseThrow();
-                    assertThat(booking.getBookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+                    assertThat(booking.getBookingStatus()).isEqualTo(BookingStatus.PENDING_PAYMENT);
                     assertThat(booking.getPaymentReceivedAmount()).isEqualByComparingTo("30.00");
                 });
     }
 
     @Test
     void duplicatePaymentEventIsIgnoredIdempotently() throws Exception {
-        UUID bookingId = createBankTransferBooking("Carol", "VH-NL-594", "TXN400000003", "2033-03-01", "2023-03-02");
+        UUID bookingId = createBankTransferBooking("Carol", "VH-NL-594", "TXN400000003", "2033-03-01", "2033-03-02");
 
         publishEvent("PAY-400000003", "TXN400000003 " + bookingId, new BigDecimal("25.00"));
         await().atMost(15, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofMillis(250))
                 .untilAsserted(() -> {
                     CarBooking booking = bookingRepository.findById(bookingId).orElseThrow();
-                    assertThat(booking.getBookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+                    assertThat(booking.getBookingStatus()).isEqualTo(BookingStatus.PENDING_PAYMENT);
                     assertThat(booking.getPaymentReceivedAmount()).isEqualByComparingTo("25.00");
                 });
 
@@ -166,7 +166,7 @@ public class BankTransferPaymentEventConsumerIT extends AbstractContainerIT {
                 paymentReference,
                 start + "T10:00:00Z",
                 end + "T10:00:00Z");
-        String body = mockMvc.perform(post("/api/v1/bookings")
+        String body = mockMvc.perform(post("/v1/bookings")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isCreated())

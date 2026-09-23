@@ -19,7 +19,7 @@ public final class BookingRequestFixtures {
             String endDate) {
         ObjectNode node = objectMapper.createObjectNode();
         node.put("customerName", customer);
-        node.put("vehicleID", vehicleId);
+        node.put("vehicleId", vehicleId);
         node.put("vehicleCategory", category);
         node.put("paymentMethod", paymentMethod);
         node.put("startDate", ZonedDateTime.parse(startDate).toString());

@@ -40,7 +40,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class BookingApiIT {
 
     @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer<?> POSTGRES =
+            new PostgreSQLContainer<>("postgres:16-alpine").withStartupTimeout(java.time.Duration.ofMinutes(2));
 
     @DynamicPropertySource
     static void registerDatasource(DynamicPropertyRegistry registry) {

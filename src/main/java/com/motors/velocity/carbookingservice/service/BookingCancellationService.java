@@ -6,15 +6,14 @@ import com.motors.velocity.carbookingservice.model.BookingStatus;
 import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
+import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Instant;
-import java.util.List;
 
 @Slf4j
 @Service

@@ -8,12 +8,11 @@ import com.motors.velocity.carbookingservice.exception.ResourceNotFoundException
 import com.motors.velocity.carbookingservice.model.ErrorCode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor

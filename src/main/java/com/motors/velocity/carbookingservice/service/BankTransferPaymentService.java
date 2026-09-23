@@ -9,16 +9,15 @@ import com.motors.velocity.carbookingservice.model.PaymentMode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BankTransferPaymentEventRepository;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -136,8 +135,8 @@ public class BankTransferPaymentService {
         return bookingRepository.applyBankTransferPayment(
                         booking.getBookingId(),
                         event.paymentAmount(),
-                        BookingStatus.PENDING_PAYMENT,
                         BookingStatus.CONFIRMED,
+                        BookingStatus.PENDING_PAYMENT,
                         receivedAt)
                 == 1;
     }

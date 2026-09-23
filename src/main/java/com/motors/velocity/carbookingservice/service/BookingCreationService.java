@@ -9,13 +9,12 @@ import com.motors.velocity.carbookingservice.model.ErrorCode;
 import com.motors.velocity.carbookingservice.observability.BookingMetrics;
 import com.motors.velocity.carbookingservice.repository.BookingRepository;
 import io.micrometer.core.instrument.Timer;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
 
 @Slf4j
 @RequiredArgsConstructor
