@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/credit-card-payment-api/payment-status",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.paymentReference == 'DL999999999')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "lastUpdateDate": "2017-07-21T17:32:28Z",
+      "status": "REJECTED"
+    }
+  }
+}

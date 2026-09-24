@@ -50,6 +50,24 @@ services:
       timeout: 3s
       retries: 10
 
+  wiremock:
+    image: wiremock/wiremock:3.13.1
+    container_name: credit-card-payment-wiremock
+    ports:
+      - "9090:8080"
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings:ro
+      - ./wiremock/__files:/home/wiremock/__files:ro
+    command:
+      - "--global-response-templating"
+      - "--verbose"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/__admin/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   zipkin:
     image: openzipkin/zipkin:latest
     ports:

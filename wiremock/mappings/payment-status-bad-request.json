@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/credit-card-payment-api/payment-status",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.paymentReference == 'INVALID')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "error": "Invalid payment reference"
+    }
+  }
+}
